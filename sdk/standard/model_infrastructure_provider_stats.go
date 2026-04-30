@@ -19,9 +19,9 @@ var _ MappedNullable = &InfrastructureProviderStats{}
 
 // InfrastructureProviderStats Provide operational stats for Infrastructure Provider
 type InfrastructureProviderStats struct {
-	Machine       *MachineCountByStatus       `json:"machine,omitempty"`
-	IpBlock       *IpBlockCountByStatus       `json:"ipBlock,omitempty"`
-	TenantAccount *TenantAccountCountByStatus `json:"tenantAccount,omitempty"`
+	Machine       NullableMachineCountByStatus       `json:"machine,omitempty"`
+	IpBlock       NullableIpBlockCountByStatus       `json:"ipBlock,omitempty"`
+	TenantAccount NullableTenantAccountCountByStatus `json:"tenantAccount,omitempty"`
 }
 
 // NewInfrastructureProviderStats instantiates a new InfrastructureProviderStats object
@@ -41,100 +41,133 @@ func NewInfrastructureProviderStatsWithDefaults() *InfrastructureProviderStats {
 	return &this
 }
 
-// GetMachine returns the Machine field value if set, zero value otherwise.
+// GetMachine returns the Machine field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *InfrastructureProviderStats) GetMachine() MachineCountByStatus {
-	if o == nil || IsNil(o.Machine) {
+	if o == nil || IsNil(o.Machine.Get()) {
 		var ret MachineCountByStatus
 		return ret
 	}
-	return *o.Machine
+	return *o.Machine.Get()
 }
 
 // GetMachineOk returns a tuple with the Machine field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *InfrastructureProviderStats) GetMachineOk() (*MachineCountByStatus, bool) {
-	if o == nil || IsNil(o.Machine) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Machine, true
+	return o.Machine.Get(), o.Machine.IsSet()
 }
 
 // HasMachine returns a boolean if a field has been set.
 func (o *InfrastructureProviderStats) HasMachine() bool {
-	if o != nil && !IsNil(o.Machine) {
+	if o != nil && o.Machine.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetMachine gets a reference to the given MachineCountByStatus and assigns it to the Machine field.
+// SetMachine gets a reference to the given NullableMachineCountByStatus and assigns it to the Machine field.
 func (o *InfrastructureProviderStats) SetMachine(v MachineCountByStatus) {
-	o.Machine = &v
+	o.Machine.Set(&v)
 }
 
-// GetIpBlock returns the IpBlock field value if set, zero value otherwise.
+// SetMachineNil sets the value for Machine to be an explicit nil
+func (o *InfrastructureProviderStats) SetMachineNil() {
+	o.Machine.Set(nil)
+}
+
+// UnsetMachine ensures that no value is present for Machine, not even an explicit nil
+func (o *InfrastructureProviderStats) UnsetMachine() {
+	o.Machine.Unset()
+}
+
+// GetIpBlock returns the IpBlock field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *InfrastructureProviderStats) GetIpBlock() IpBlockCountByStatus {
-	if o == nil || IsNil(o.IpBlock) {
+	if o == nil || IsNil(o.IpBlock.Get()) {
 		var ret IpBlockCountByStatus
 		return ret
 	}
-	return *o.IpBlock
+	return *o.IpBlock.Get()
 }
 
 // GetIpBlockOk returns a tuple with the IpBlock field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *InfrastructureProviderStats) GetIpBlockOk() (*IpBlockCountByStatus, bool) {
-	if o == nil || IsNil(o.IpBlock) {
+	if o == nil {
 		return nil, false
 	}
-	return o.IpBlock, true
+	return o.IpBlock.Get(), o.IpBlock.IsSet()
 }
 
 // HasIpBlock returns a boolean if a field has been set.
 func (o *InfrastructureProviderStats) HasIpBlock() bool {
-	if o != nil && !IsNil(o.IpBlock) {
+	if o != nil && o.IpBlock.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetIpBlock gets a reference to the given IpBlockCountByStatus and assigns it to the IpBlock field.
+// SetIpBlock gets a reference to the given NullableIpBlockCountByStatus and assigns it to the IpBlock field.
 func (o *InfrastructureProviderStats) SetIpBlock(v IpBlockCountByStatus) {
-	o.IpBlock = &v
+	o.IpBlock.Set(&v)
 }
 
-// GetTenantAccount returns the TenantAccount field value if set, zero value otherwise.
+// SetIpBlockNil sets the value for IpBlock to be an explicit nil
+func (o *InfrastructureProviderStats) SetIpBlockNil() {
+	o.IpBlock.Set(nil)
+}
+
+// UnsetIpBlock ensures that no value is present for IpBlock, not even an explicit nil
+func (o *InfrastructureProviderStats) UnsetIpBlock() {
+	o.IpBlock.Unset()
+}
+
+// GetTenantAccount returns the TenantAccount field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *InfrastructureProviderStats) GetTenantAccount() TenantAccountCountByStatus {
-	if o == nil || IsNil(o.TenantAccount) {
+	if o == nil || IsNil(o.TenantAccount.Get()) {
 		var ret TenantAccountCountByStatus
 		return ret
 	}
-	return *o.TenantAccount
+	return *o.TenantAccount.Get()
 }
 
 // GetTenantAccountOk returns a tuple with the TenantAccount field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *InfrastructureProviderStats) GetTenantAccountOk() (*TenantAccountCountByStatus, bool) {
-	if o == nil || IsNil(o.TenantAccount) {
+	if o == nil {
 		return nil, false
 	}
-	return o.TenantAccount, true
+	return o.TenantAccount.Get(), o.TenantAccount.IsSet()
 }
 
 // HasTenantAccount returns a boolean if a field has been set.
 func (o *InfrastructureProviderStats) HasTenantAccount() bool {
-	if o != nil && !IsNil(o.TenantAccount) {
+	if o != nil && o.TenantAccount.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetTenantAccount gets a reference to the given TenantAccountCountByStatus and assigns it to the TenantAccount field.
+// SetTenantAccount gets a reference to the given NullableTenantAccountCountByStatus and assigns it to the TenantAccount field.
 func (o *InfrastructureProviderStats) SetTenantAccount(v TenantAccountCountByStatus) {
-	o.TenantAccount = &v
+	o.TenantAccount.Set(&v)
+}
+
+// SetTenantAccountNil sets the value for TenantAccount to be an explicit nil
+func (o *InfrastructureProviderStats) SetTenantAccountNil() {
+	o.TenantAccount.Set(nil)
+}
+
+// UnsetTenantAccount ensures that no value is present for TenantAccount, not even an explicit nil
+func (o *InfrastructureProviderStats) UnsetTenantAccount() {
+	o.TenantAccount.Unset()
 }
 
 func (o InfrastructureProviderStats) MarshalJSON() ([]byte, error) {
@@ -147,14 +180,14 @@ func (o InfrastructureProviderStats) MarshalJSON() ([]byte, error) {
 
 func (o InfrastructureProviderStats) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
-	if !IsNil(o.Machine) {
-		toSerialize["machine"] = o.Machine
+	if o.Machine.IsSet() {
+		toSerialize["machine"] = o.Machine.Get()
 	}
-	if !IsNil(o.IpBlock) {
-		toSerialize["ipBlock"] = o.IpBlock
+	if o.IpBlock.IsSet() {
+		toSerialize["ipBlock"] = o.IpBlock.Get()
 	}
-	if !IsNil(o.TenantAccount) {
-		toSerialize["tenantAccount"] = o.TenantAccount
+	if o.TenantAccount.IsSet() {
+		toSerialize["tenantAccount"] = o.TenantAccount.Get()
 	}
 	return toSerialize, nil
 }

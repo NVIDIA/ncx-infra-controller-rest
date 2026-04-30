@@ -31,12 +31,12 @@ type InstanceType struct {
 	// Available only for Providers
 	MachineInstanceTypes []MachineInstanceType `json:"machineInstanceTypes,omitempty"`
 	// summary of machine counts by allocation status
-	AllocationStats *InstanceTypeAllocationStats `json:"allocationStats,omitempty"`
-	Status          *InstanceTypeStatus          `json:"status,omitempty"`
-	StatusHistory   []StatusDetail               `json:"statusHistory,omitempty"`
-	Deprecations    []Deprecation                `json:"deprecations,omitempty"`
-	Created         *time.Time                   `json:"created,omitempty"`
-	Updated         *time.Time                   `json:"updated,omitempty"`
+	AllocationStats NullableInstanceTypeAllocationStats `json:"allocationStats,omitempty"`
+	Status          *InstanceTypeStatus                 `json:"status,omitempty"`
+	StatusHistory   []StatusDetail                      `json:"statusHistory,omitempty"`
+	Deprecations    []Deprecation                       `json:"deprecations,omitempty"`
+	Created         *time.Time                          `json:"created,omitempty"`
+	Updated         *time.Time                          `json:"updated,omitempty"`
 }
 
 // NewInstanceType instantiates a new InstanceType object
@@ -248,9 +248,9 @@ func (o *InstanceType) SetSiteId(v string) {
 	o.SiteId = &v
 }
 
-// GetLabels returns the Labels field value if set, zero value otherwise.
+// GetLabels returns the Labels field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *InstanceType) GetLabels() map[string]string {
-	if o == nil || IsNil(o.Labels) {
+	if o == nil {
 		var ret map[string]string
 		return ret
 	}
@@ -259,6 +259,7 @@ func (o *InstanceType) GetLabels() map[string]string {
 
 // GetLabelsOk returns a tuple with the Labels field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *InstanceType) GetLabelsOk() (map[string]string, bool) {
 	if o == nil || IsNil(o.Labels) {
 		return map[string]string{}, false
@@ -344,36 +345,47 @@ func (o *InstanceType) SetMachineInstanceTypes(v []MachineInstanceType) {
 	o.MachineInstanceTypes = v
 }
 
-// GetAllocationStats returns the AllocationStats field value if set, zero value otherwise.
+// GetAllocationStats returns the AllocationStats field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *InstanceType) GetAllocationStats() InstanceTypeAllocationStats {
-	if o == nil || IsNil(o.AllocationStats) {
+	if o == nil || IsNil(o.AllocationStats.Get()) {
 		var ret InstanceTypeAllocationStats
 		return ret
 	}
-	return *o.AllocationStats
+	return *o.AllocationStats.Get()
 }
 
 // GetAllocationStatsOk returns a tuple with the AllocationStats field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *InstanceType) GetAllocationStatsOk() (*InstanceTypeAllocationStats, bool) {
-	if o == nil || IsNil(o.AllocationStats) {
+	if o == nil {
 		return nil, false
 	}
-	return o.AllocationStats, true
+	return o.AllocationStats.Get(), o.AllocationStats.IsSet()
 }
 
 // HasAllocationStats returns a boolean if a field has been set.
 func (o *InstanceType) HasAllocationStats() bool {
-	if o != nil && !IsNil(o.AllocationStats) {
+	if o != nil && o.AllocationStats.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetAllocationStats gets a reference to the given InstanceTypeAllocationStats and assigns it to the AllocationStats field.
+// SetAllocationStats gets a reference to the given NullableInstanceTypeAllocationStats and assigns it to the AllocationStats field.
 func (o *InstanceType) SetAllocationStats(v InstanceTypeAllocationStats) {
-	o.AllocationStats = &v
+	o.AllocationStats.Set(&v)
+}
+
+// SetAllocationStatsNil sets the value for AllocationStats to be an explicit nil
+func (o *InstanceType) SetAllocationStatsNil() {
+	o.AllocationStats.Set(nil)
+}
+
+// UnsetAllocationStats ensures that no value is present for AllocationStats, not even an explicit nil
+func (o *InstanceType) UnsetAllocationStats() {
+	o.AllocationStats.Unset()
 }
 
 // GetStatus returns the Status field value if set, zero value otherwise.
@@ -564,7 +576,7 @@ func (o InstanceType) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.SiteId) {
 		toSerialize["siteId"] = o.SiteId
 	}
-	if !IsNil(o.Labels) {
+	if o.Labels != nil {
 		toSerialize["labels"] = o.Labels
 	}
 	if !IsNil(o.MachineCapabilities) {
@@ -573,8 +585,8 @@ func (o InstanceType) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.MachineInstanceTypes) {
 		toSerialize["machineInstanceTypes"] = o.MachineInstanceTypes
 	}
-	if !IsNil(o.AllocationStats) {
-		toSerialize["allocationStats"] = o.AllocationStats
+	if o.AllocationStats.IsSet() {
+		toSerialize["allocationStats"] = o.AllocationStats.Get()
 	}
 	if !IsNil(o.Status) {
 		toSerialize["status"] = o.Status

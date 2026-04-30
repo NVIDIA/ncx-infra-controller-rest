@@ -39,7 +39,7 @@ type AuditEntry struct {
 	// User ID that executed the API call
 	UserID NullableString `json:"userID,omitempty"`
 	// User that executed the API call
-	User *User `json:"user,omitempty"`
+	User NullableUser `json:"user,omitempty"`
 	// Organization name
 	OrgName *string `json:"orgName,omitempty"`
 	// Extra data in JSON format
@@ -368,36 +368,47 @@ func (o *AuditEntry) UnsetUserID() {
 	o.UserID.Unset()
 }
 
-// GetUser returns the User field value if set, zero value otherwise.
+// GetUser returns the User field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *AuditEntry) GetUser() User {
-	if o == nil || IsNil(o.User) {
+	if o == nil || IsNil(o.User.Get()) {
 		var ret User
 		return ret
 	}
-	return *o.User
+	return *o.User.Get()
 }
 
 // GetUserOk returns a tuple with the User field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *AuditEntry) GetUserOk() (*User, bool) {
-	if o == nil || IsNil(o.User) {
+	if o == nil {
 		return nil, false
 	}
-	return o.User, true
+	return o.User.Get(), o.User.IsSet()
 }
 
 // HasUser returns a boolean if a field has been set.
 func (o *AuditEntry) HasUser() bool {
-	if o != nil && !IsNil(o.User) {
+	if o != nil && o.User.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetUser gets a reference to the given User and assigns it to the User field.
+// SetUser gets a reference to the given NullableUser and assigns it to the User field.
 func (o *AuditEntry) SetUser(v User) {
-	o.User = &v
+	o.User.Set(&v)
+}
+
+// SetUserNil sets the value for User to be an explicit nil
+func (o *AuditEntry) SetUserNil() {
+	o.User.Set(nil)
+}
+
+// UnsetUser ensures that no value is present for User, not even an explicit nil
+func (o *AuditEntry) UnsetUser() {
+	o.User.Unset()
 }
 
 // GetOrgName returns the OrgName field value if set, zero value otherwise.
@@ -597,8 +608,8 @@ func (o AuditEntry) ToMap() (map[string]interface{}, error) {
 	if o.UserID.IsSet() {
 		toSerialize["userID"] = o.UserID.Get()
 	}
-	if !IsNil(o.User) {
-		toSerialize["user"] = o.User
+	if o.User.IsSet() {
+		toSerialize["user"] = o.User.Get()
 	}
 	if !IsNil(o.OrgName) {
 		toSerialize["orgName"] = o.OrgName

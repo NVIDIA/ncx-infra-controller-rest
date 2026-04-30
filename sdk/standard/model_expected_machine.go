@@ -33,11 +33,11 @@ type ExpectedMachine struct {
 	// Optional ID of the SKU associated with this Expected Machine
 	SkuId NullableString `json:"skuId,omitempty"`
 	// SKU information for this Expected Machine (populated when includeRelation=Sku is specified)
-	Sku *Sku `json:"sku,omitempty"`
+	Sku NullableSku `json:"sku,omitempty"`
 	// Optional ID of the Machine associated with this Expected Machine
 	MachineId NullableString `json:"machineId,omitempty"`
 	// Machine information for this Expected Machine (populated when includeRelation=Machine is specified)
-	Machine *MachineSummary `json:"machine,omitempty"`
+	Machine NullableMachineSummary `json:"machine,omitempty"`
 	// Optional rack identifier for this component
 	RackId NullableString `json:"rackId,omitempty"`
 	// Display name for this component
@@ -284,36 +284,47 @@ func (o *ExpectedMachine) UnsetSkuId() {
 	o.SkuId.Unset()
 }
 
-// GetSku returns the Sku field value if set, zero value otherwise.
+// GetSku returns the Sku field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *ExpectedMachine) GetSku() Sku {
-	if o == nil || IsNil(o.Sku) {
+	if o == nil || IsNil(o.Sku.Get()) {
 		var ret Sku
 		return ret
 	}
-	return *o.Sku
+	return *o.Sku.Get()
 }
 
 // GetSkuOk returns a tuple with the Sku field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *ExpectedMachine) GetSkuOk() (*Sku, bool) {
-	if o == nil || IsNil(o.Sku) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Sku, true
+	return o.Sku.Get(), o.Sku.IsSet()
 }
 
 // HasSku returns a boolean if a field has been set.
 func (o *ExpectedMachine) HasSku() bool {
-	if o != nil && !IsNil(o.Sku) {
+	if o != nil && o.Sku.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetSku gets a reference to the given Sku and assigns it to the Sku field.
+// SetSku gets a reference to the given NullableSku and assigns it to the Sku field.
 func (o *ExpectedMachine) SetSku(v Sku) {
-	o.Sku = &v
+	o.Sku.Set(&v)
+}
+
+// SetSkuNil sets the value for Sku to be an explicit nil
+func (o *ExpectedMachine) SetSkuNil() {
+	o.Sku.Set(nil)
+}
+
+// UnsetSku ensures that no value is present for Sku, not even an explicit nil
+func (o *ExpectedMachine) UnsetSku() {
+	o.Sku.Unset()
 }
 
 // GetMachineId returns the MachineId field value if set, zero value otherwise (both if not set or set to explicit null).
@@ -359,36 +370,47 @@ func (o *ExpectedMachine) UnsetMachineId() {
 	o.MachineId.Unset()
 }
 
-// GetMachine returns the Machine field value if set, zero value otherwise.
+// GetMachine returns the Machine field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *ExpectedMachine) GetMachine() MachineSummary {
-	if o == nil || IsNil(o.Machine) {
+	if o == nil || IsNil(o.Machine.Get()) {
 		var ret MachineSummary
 		return ret
 	}
-	return *o.Machine
+	return *o.Machine.Get()
 }
 
 // GetMachineOk returns a tuple with the Machine field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *ExpectedMachine) GetMachineOk() (*MachineSummary, bool) {
-	if o == nil || IsNil(o.Machine) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Machine, true
+	return o.Machine.Get(), o.Machine.IsSet()
 }
 
 // HasMachine returns a boolean if a field has been set.
 func (o *ExpectedMachine) HasMachine() bool {
-	if o != nil && !IsNil(o.Machine) {
+	if o != nil && o.Machine.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetMachine gets a reference to the given MachineSummary and assigns it to the Machine field.
+// SetMachine gets a reference to the given NullableMachineSummary and assigns it to the Machine field.
 func (o *ExpectedMachine) SetMachine(v MachineSummary) {
-	o.Machine = &v
+	o.Machine.Set(&v)
+}
+
+// SetMachineNil sets the value for Machine to be an explicit nil
+func (o *ExpectedMachine) SetMachineNil() {
+	o.Machine.Set(nil)
+}
+
+// UnsetMachine ensures that no value is present for Machine, not even an explicit nil
+func (o *ExpectedMachine) UnsetMachine() {
+	o.Machine.Unset()
 }
 
 // GetRackId returns the RackId field value if set, zero value otherwise (both if not set or set to explicit null).
@@ -778,9 +800,9 @@ func (o *ExpectedMachine) UnsetHostId() {
 	o.HostId.Unset()
 }
 
-// GetLabels returns the Labels field value if set, zero value otherwise.
+// GetLabels returns the Labels field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *ExpectedMachine) GetLabels() map[string]string {
-	if o == nil || IsNil(o.Labels) {
+	if o == nil {
 		var ret map[string]string
 		return ret
 	}
@@ -789,6 +811,7 @@ func (o *ExpectedMachine) GetLabels() map[string]string {
 
 // GetLabelsOk returns a tuple with the Labels field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *ExpectedMachine) GetLabelsOk() (map[string]string, bool) {
 	if o == nil || IsNil(o.Labels) {
 		return map[string]string{}, false
@@ -902,14 +925,14 @@ func (o ExpectedMachine) ToMap() (map[string]interface{}, error) {
 	if o.SkuId.IsSet() {
 		toSerialize["skuId"] = o.SkuId.Get()
 	}
-	if !IsNil(o.Sku) {
-		toSerialize["sku"] = o.Sku
+	if o.Sku.IsSet() {
+		toSerialize["sku"] = o.Sku.Get()
 	}
 	if o.MachineId.IsSet() {
 		toSerialize["machineId"] = o.MachineId.Get()
 	}
-	if !IsNil(o.Machine) {
-		toSerialize["machine"] = o.Machine
+	if o.Machine.IsSet() {
+		toSerialize["machine"] = o.Machine.Get()
 	}
 	if o.RackId.IsSet() {
 		toSerialize["rackId"] = o.RackId.Get()
@@ -938,7 +961,7 @@ func (o ExpectedMachine) ToMap() (map[string]interface{}, error) {
 	if o.HostId.IsSet() {
 		toSerialize["hostId"] = o.HostId.Get()
 	}
-	if !IsNil(o.Labels) {
+	if o.Labels != nil {
 		toSerialize["labels"] = o.Labels
 	}
 	if !IsNil(o.Created) {

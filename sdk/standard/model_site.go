@@ -33,9 +33,9 @@ type Site struct {
 	SiteAgentVersion *string `json:"siteAgentVersion,omitempty"`
 	// Token that can be used to register a Site. Value only exposed to Provider
 	RegistrationToken *string `json:"registrationToken,omitempty"`
-	// Date/time when registration token  expires. Value only exposed to Provider
-	RegistrationTokenExpiration *time.Time `json:"registrationTokenExpiration,omitempty"`
-	SerialConsoleHostname       *string    `json:"serialConsoleHostname,omitempty"`
+	// Date/time when registration token expires. Value only exposed to Provider
+	RegistrationTokenExpiration NullableTime `json:"registrationTokenExpiration,omitempty"`
+	SerialConsoleHostname       *string      `json:"serialConsoleHostname,omitempty"`
 	// Indicates if Serial Console is enabled for the Site by the Provider
 	IsSerialConsoleEnabled *bool `json:"isSerialConsoleEnabled,omitempty"`
 	// Maximum idle time in seconds before Serial Console is disconnected
@@ -45,15 +45,15 @@ type Site struct {
 	// Only visible to Tenant retrieving the Site. Indicates if Serial Console access using SSH Keys is enabled by Tenant
 	IsSerialConsoleSSHKeysEnabled *bool `json:"isSerialConsoleSSHKeysEnabled,omitempty"`
 	// Indicates if the Site is currently reachable from Cloud
-	IsOnline      *bool             `json:"isOnline,omitempty"`
-	Status        *SiteStatus       `json:"status,omitempty"`
-	StatusHistory []StatusDetail    `json:"statusHistory,omitempty"`
-	Created       *time.Time        `json:"created,omitempty"`
-	Updated       *time.Time        `json:"updated,omitempty"`
-	Location      *SiteLocation     `json:"location,omitempty"`
-	Contact       *SiteContact      `json:"contact,omitempty"`
-	Capabilities  *SiteCapabilities `json:"capabilities,omitempty"`
-	MachineStats  *SiteMachineStats `json:"machineStats,omitempty"`
+	IsOnline      *bool                    `json:"isOnline,omitempty"`
+	Status        *SiteStatus              `json:"status,omitempty"`
+	StatusHistory []StatusDetail           `json:"statusHistory,omitempty"`
+	Created       *time.Time               `json:"created,omitempty"`
+	Updated       *time.Time               `json:"updated,omitempty"`
+	Location      NullableSiteLocation     `json:"location,omitempty"`
+	Contact       NullableSiteContact      `json:"contact,omitempty"`
+	Capabilities  NullableSiteCapabilities `json:"capabilities,omitempty"`
+	MachineStats  NullableSiteMachineStats `json:"machineStats,omitempty"`
 }
 
 // NewSite instantiates a new Site object
@@ -329,36 +329,47 @@ func (o *Site) SetRegistrationToken(v string) {
 	o.RegistrationToken = &v
 }
 
-// GetRegistrationTokenExpiration returns the RegistrationTokenExpiration field value if set, zero value otherwise.
+// GetRegistrationTokenExpiration returns the RegistrationTokenExpiration field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *Site) GetRegistrationTokenExpiration() time.Time {
-	if o == nil || IsNil(o.RegistrationTokenExpiration) {
+	if o == nil || IsNil(o.RegistrationTokenExpiration.Get()) {
 		var ret time.Time
 		return ret
 	}
-	return *o.RegistrationTokenExpiration
+	return *o.RegistrationTokenExpiration.Get()
 }
 
 // GetRegistrationTokenExpirationOk returns a tuple with the RegistrationTokenExpiration field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *Site) GetRegistrationTokenExpirationOk() (*time.Time, bool) {
-	if o == nil || IsNil(o.RegistrationTokenExpiration) {
+	if o == nil {
 		return nil, false
 	}
-	return o.RegistrationTokenExpiration, true
+	return o.RegistrationTokenExpiration.Get(), o.RegistrationTokenExpiration.IsSet()
 }
 
 // HasRegistrationTokenExpiration returns a boolean if a field has been set.
 func (o *Site) HasRegistrationTokenExpiration() bool {
-	if o != nil && !IsNil(o.RegistrationTokenExpiration) {
+	if o != nil && o.RegistrationTokenExpiration.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetRegistrationTokenExpiration gets a reference to the given time.Time and assigns it to the RegistrationTokenExpiration field.
+// SetRegistrationTokenExpiration gets a reference to the given NullableTime and assigns it to the RegistrationTokenExpiration field.
 func (o *Site) SetRegistrationTokenExpiration(v time.Time) {
-	o.RegistrationTokenExpiration = &v
+	o.RegistrationTokenExpiration.Set(&v)
+}
+
+// SetRegistrationTokenExpirationNil sets the value for RegistrationTokenExpiration to be an explicit nil
+func (o *Site) SetRegistrationTokenExpirationNil() {
+	o.RegistrationTokenExpiration.Set(nil)
+}
+
+// UnsetRegistrationTokenExpiration ensures that no value is present for RegistrationTokenExpiration, not even an explicit nil
+func (o *Site) UnsetRegistrationTokenExpiration() {
+	o.RegistrationTokenExpiration.Unset()
 }
 
 // GetSerialConsoleHostname returns the SerialConsoleHostname field value if set, zero value otherwise.
@@ -703,132 +714,176 @@ func (o *Site) SetUpdated(v time.Time) {
 	o.Updated = &v
 }
 
-// GetLocation returns the Location field value if set, zero value otherwise.
+// GetLocation returns the Location field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *Site) GetLocation() SiteLocation {
-	if o == nil || IsNil(o.Location) {
+	if o == nil || IsNil(o.Location.Get()) {
 		var ret SiteLocation
 		return ret
 	}
-	return *o.Location
+	return *o.Location.Get()
 }
 
 // GetLocationOk returns a tuple with the Location field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *Site) GetLocationOk() (*SiteLocation, bool) {
-	if o == nil || IsNil(o.Location) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Location, true
+	return o.Location.Get(), o.Location.IsSet()
 }
 
 // HasLocation returns a boolean if a field has been set.
 func (o *Site) HasLocation() bool {
-	if o != nil && !IsNil(o.Location) {
+	if o != nil && o.Location.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetLocation gets a reference to the given SiteLocation and assigns it to the Location field.
+// SetLocation gets a reference to the given NullableSiteLocation and assigns it to the Location field.
 func (o *Site) SetLocation(v SiteLocation) {
-	o.Location = &v
+	o.Location.Set(&v)
 }
 
-// GetContact returns the Contact field value if set, zero value otherwise.
+// SetLocationNil sets the value for Location to be an explicit nil
+func (o *Site) SetLocationNil() {
+	o.Location.Set(nil)
+}
+
+// UnsetLocation ensures that no value is present for Location, not even an explicit nil
+func (o *Site) UnsetLocation() {
+	o.Location.Unset()
+}
+
+// GetContact returns the Contact field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *Site) GetContact() SiteContact {
-	if o == nil || IsNil(o.Contact) {
+	if o == nil || IsNil(o.Contact.Get()) {
 		var ret SiteContact
 		return ret
 	}
-	return *o.Contact
+	return *o.Contact.Get()
 }
 
 // GetContactOk returns a tuple with the Contact field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *Site) GetContactOk() (*SiteContact, bool) {
-	if o == nil || IsNil(o.Contact) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Contact, true
+	return o.Contact.Get(), o.Contact.IsSet()
 }
 
 // HasContact returns a boolean if a field has been set.
 func (o *Site) HasContact() bool {
-	if o != nil && !IsNil(o.Contact) {
+	if o != nil && o.Contact.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetContact gets a reference to the given SiteContact and assigns it to the Contact field.
+// SetContact gets a reference to the given NullableSiteContact and assigns it to the Contact field.
 func (o *Site) SetContact(v SiteContact) {
-	o.Contact = &v
+	o.Contact.Set(&v)
 }
 
-// GetCapabilities returns the Capabilities field value if set, zero value otherwise.
+// SetContactNil sets the value for Contact to be an explicit nil
+func (o *Site) SetContactNil() {
+	o.Contact.Set(nil)
+}
+
+// UnsetContact ensures that no value is present for Contact, not even an explicit nil
+func (o *Site) UnsetContact() {
+	o.Contact.Unset()
+}
+
+// GetCapabilities returns the Capabilities field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *Site) GetCapabilities() SiteCapabilities {
-	if o == nil || IsNil(o.Capabilities) {
+	if o == nil || IsNil(o.Capabilities.Get()) {
 		var ret SiteCapabilities
 		return ret
 	}
-	return *o.Capabilities
+	return *o.Capabilities.Get()
 }
 
 // GetCapabilitiesOk returns a tuple with the Capabilities field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *Site) GetCapabilitiesOk() (*SiteCapabilities, bool) {
-	if o == nil || IsNil(o.Capabilities) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Capabilities, true
+	return o.Capabilities.Get(), o.Capabilities.IsSet()
 }
 
 // HasCapabilities returns a boolean if a field has been set.
 func (o *Site) HasCapabilities() bool {
-	if o != nil && !IsNil(o.Capabilities) {
+	if o != nil && o.Capabilities.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetCapabilities gets a reference to the given SiteCapabilities and assigns it to the Capabilities field.
+// SetCapabilities gets a reference to the given NullableSiteCapabilities and assigns it to the Capabilities field.
 func (o *Site) SetCapabilities(v SiteCapabilities) {
-	o.Capabilities = &v
+	o.Capabilities.Set(&v)
 }
 
-// GetMachineStats returns the MachineStats field value if set, zero value otherwise.
+// SetCapabilitiesNil sets the value for Capabilities to be an explicit nil
+func (o *Site) SetCapabilitiesNil() {
+	o.Capabilities.Set(nil)
+}
+
+// UnsetCapabilities ensures that no value is present for Capabilities, not even an explicit nil
+func (o *Site) UnsetCapabilities() {
+	o.Capabilities.Unset()
+}
+
+// GetMachineStats returns the MachineStats field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *Site) GetMachineStats() SiteMachineStats {
-	if o == nil || IsNil(o.MachineStats) {
+	if o == nil || IsNil(o.MachineStats.Get()) {
 		var ret SiteMachineStats
 		return ret
 	}
-	return *o.MachineStats
+	return *o.MachineStats.Get()
 }
 
 // GetMachineStatsOk returns a tuple with the MachineStats field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *Site) GetMachineStatsOk() (*SiteMachineStats, bool) {
-	if o == nil || IsNil(o.MachineStats) {
+	if o == nil {
 		return nil, false
 	}
-	return o.MachineStats, true
+	return o.MachineStats.Get(), o.MachineStats.IsSet()
 }
 
 // HasMachineStats returns a boolean if a field has been set.
 func (o *Site) HasMachineStats() bool {
-	if o != nil && !IsNil(o.MachineStats) {
+	if o != nil && o.MachineStats.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetMachineStats gets a reference to the given SiteMachineStats and assigns it to the MachineStats field.
+// SetMachineStats gets a reference to the given NullableSiteMachineStats and assigns it to the MachineStats field.
 func (o *Site) SetMachineStats(v SiteMachineStats) {
-	o.MachineStats = &v
+	o.MachineStats.Set(&v)
+}
+
+// SetMachineStatsNil sets the value for MachineStats to be an explicit nil
+func (o *Site) SetMachineStatsNil() {
+	o.MachineStats.Set(nil)
+}
+
+// UnsetMachineStats ensures that no value is present for MachineStats, not even an explicit nil
+func (o *Site) UnsetMachineStats() {
+	o.MachineStats.Unset()
 }
 
 func (o Site) MarshalJSON() ([]byte, error) {
@@ -865,8 +920,8 @@ func (o Site) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.RegistrationToken) {
 		toSerialize["registrationToken"] = o.RegistrationToken
 	}
-	if !IsNil(o.RegistrationTokenExpiration) {
-		toSerialize["registrationTokenExpiration"] = o.RegistrationTokenExpiration
+	if o.RegistrationTokenExpiration.IsSet() {
+		toSerialize["registrationTokenExpiration"] = o.RegistrationTokenExpiration.Get()
 	}
 	if !IsNil(o.SerialConsoleHostname) {
 		toSerialize["serialConsoleHostname"] = o.SerialConsoleHostname
@@ -898,17 +953,17 @@ func (o Site) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.Updated) {
 		toSerialize["updated"] = o.Updated
 	}
-	if !IsNil(o.Location) {
-		toSerialize["location"] = o.Location
+	if o.Location.IsSet() {
+		toSerialize["location"] = o.Location.Get()
 	}
-	if !IsNil(o.Contact) {
-		toSerialize["contact"] = o.Contact
+	if o.Contact.IsSet() {
+		toSerialize["contact"] = o.Contact.Get()
 	}
-	if !IsNil(o.Capabilities) {
-		toSerialize["capabilities"] = o.Capabilities
+	if o.Capabilities.IsSet() {
+		toSerialize["capabilities"] = o.Capabilities.Get()
 	}
-	if !IsNil(o.MachineStats) {
-		toSerialize["machineStats"] = o.MachineStats
+	if o.MachineStats.IsSet() {
+		toSerialize["machineStats"] = o.MachineStats.Get()
 	}
 	return toSerialize, nil
 }

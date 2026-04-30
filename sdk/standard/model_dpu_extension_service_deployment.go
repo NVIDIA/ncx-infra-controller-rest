@@ -23,7 +23,7 @@ type DpuExtensionServiceDeployment struct {
 	// Unique identifier for the DPU Extension Service Deployment
 	Id *string `json:"id,omitempty"`
 	// Summary of the DPU Extension Service. Deployed version may be different
-	DpuExtensionService *DpuExtensionServiceSummary `json:"dpuExtensionService,omitempty"`
+	DpuExtensionService NullableDpuExtensionServiceSummary `json:"dpuExtensionService,omitempty"`
 	// Deployed version of the DPU Extension Service
 	Version *string `json:"version,omitempty"`
 	// Status of the DPU Extension Service Deployment
@@ -83,36 +83,47 @@ func (o *DpuExtensionServiceDeployment) SetId(v string) {
 	o.Id = &v
 }
 
-// GetDpuExtensionService returns the DpuExtensionService field value if set, zero value otherwise.
+// GetDpuExtensionService returns the DpuExtensionService field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *DpuExtensionServiceDeployment) GetDpuExtensionService() DpuExtensionServiceSummary {
-	if o == nil || IsNil(o.DpuExtensionService) {
+	if o == nil || IsNil(o.DpuExtensionService.Get()) {
 		var ret DpuExtensionServiceSummary
 		return ret
 	}
-	return *o.DpuExtensionService
+	return *o.DpuExtensionService.Get()
 }
 
 // GetDpuExtensionServiceOk returns a tuple with the DpuExtensionService field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *DpuExtensionServiceDeployment) GetDpuExtensionServiceOk() (*DpuExtensionServiceSummary, bool) {
-	if o == nil || IsNil(o.DpuExtensionService) {
+	if o == nil {
 		return nil, false
 	}
-	return o.DpuExtensionService, true
+	return o.DpuExtensionService.Get(), o.DpuExtensionService.IsSet()
 }
 
 // HasDpuExtensionService returns a boolean if a field has been set.
 func (o *DpuExtensionServiceDeployment) HasDpuExtensionService() bool {
-	if o != nil && !IsNil(o.DpuExtensionService) {
+	if o != nil && o.DpuExtensionService.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetDpuExtensionService gets a reference to the given DpuExtensionServiceSummary and assigns it to the DpuExtensionService field.
+// SetDpuExtensionService gets a reference to the given NullableDpuExtensionServiceSummary and assigns it to the DpuExtensionService field.
 func (o *DpuExtensionServiceDeployment) SetDpuExtensionService(v DpuExtensionServiceSummary) {
-	o.DpuExtensionService = &v
+	o.DpuExtensionService.Set(&v)
+}
+
+// SetDpuExtensionServiceNil sets the value for DpuExtensionService to be an explicit nil
+func (o *DpuExtensionServiceDeployment) SetDpuExtensionServiceNil() {
+	o.DpuExtensionService.Set(nil)
+}
+
+// UnsetDpuExtensionService ensures that no value is present for DpuExtensionService, not even an explicit nil
+func (o *DpuExtensionServiceDeployment) UnsetDpuExtensionService() {
+	o.DpuExtensionService.Unset()
 }
 
 // GetVersion returns the Version field value if set, zero value otherwise.
@@ -256,8 +267,8 @@ func (o DpuExtensionServiceDeployment) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.Id) {
 		toSerialize["id"] = o.Id
 	}
-	if !IsNil(o.DpuExtensionService) {
-		toSerialize["dpuExtensionService"] = o.DpuExtensionService
+	if o.DpuExtensionService.IsSet() {
+		toSerialize["dpuExtensionService"] = o.DpuExtensionService.Get()
 	}
 	if !IsNil(o.Version) {
 		toSerialize["version"] = o.Version

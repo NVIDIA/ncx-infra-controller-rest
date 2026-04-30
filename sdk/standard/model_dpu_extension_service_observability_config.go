@@ -21,8 +21,8 @@ var _ MappedNullable = &DpuExtensionServiceObservabilityConfig{}
 type DpuExtensionServiceObservabilityConfig struct {
 	// Optional name of the service or component being monitored
 	Name       NullableString
-	Prometheus *DpuExtensionServiceObservabilityPrometheus
-	Logging    *DpuExtensionServiceObservabilityLogging
+	Prometheus NullableDpuExtensionServiceObservabilityPrometheus
+	Logging    NullableDpuExtensionServiceObservabilityLogging
 }
 
 // NewDpuExtensionServiceObservabilityConfig instantiates a new DpuExtensionServiceObservabilityConfig object
@@ -85,68 +85,90 @@ func (o *DpuExtensionServiceObservabilityConfig) UnsetName() {
 	o.Name.Unset()
 }
 
-// GetPrometheus returns the Prometheus field value if set, zero value otherwise.
+// GetPrometheus returns the Prometheus field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *DpuExtensionServiceObservabilityConfig) GetPrometheus() DpuExtensionServiceObservabilityPrometheus {
-	if o == nil || IsNil(o.Prometheus) {
+	if o == nil || IsNil(o.Prometheus.Get()) {
 		var ret DpuExtensionServiceObservabilityPrometheus
 		return ret
 	}
-	return *o.Prometheus
+	return *o.Prometheus.Get()
 }
 
 // GetPrometheusOk returns a tuple with the Prometheus field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *DpuExtensionServiceObservabilityConfig) GetPrometheusOk() (*DpuExtensionServiceObservabilityPrometheus, bool) {
-	if o == nil || IsNil(o.Prometheus) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Prometheus, true
+	return o.Prometheus.Get(), o.Prometheus.IsSet()
 }
 
 // HasPrometheus returns a boolean if a field has been set.
 func (o *DpuExtensionServiceObservabilityConfig) HasPrometheus() bool {
-	if o != nil && !IsNil(o.Prometheus) {
+	if o != nil && o.Prometheus.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetPrometheus gets a reference to the given DpuExtensionServiceObservabilityPrometheus and assigns it to the Prometheus field.
+// SetPrometheus gets a reference to the given NullableDpuExtensionServiceObservabilityPrometheus and assigns it to the Prometheus field.
 func (o *DpuExtensionServiceObservabilityConfig) SetPrometheus(v DpuExtensionServiceObservabilityPrometheus) {
-	o.Prometheus = &v
+	o.Prometheus.Set(&v)
 }
 
-// GetLogging returns the Logging field value if set, zero value otherwise.
+// SetPrometheusNil sets the value for Prometheus to be an explicit nil
+func (o *DpuExtensionServiceObservabilityConfig) SetPrometheusNil() {
+	o.Prometheus.Set(nil)
+}
+
+// UnsetPrometheus ensures that no value is present for Prometheus, not even an explicit nil
+func (o *DpuExtensionServiceObservabilityConfig) UnsetPrometheus() {
+	o.Prometheus.Unset()
+}
+
+// GetLogging returns the Logging field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *DpuExtensionServiceObservabilityConfig) GetLogging() DpuExtensionServiceObservabilityLogging {
-	if o == nil || IsNil(o.Logging) {
+	if o == nil || IsNil(o.Logging.Get()) {
 		var ret DpuExtensionServiceObservabilityLogging
 		return ret
 	}
-	return *o.Logging
+	return *o.Logging.Get()
 }
 
 // GetLoggingOk returns a tuple with the Logging field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *DpuExtensionServiceObservabilityConfig) GetLoggingOk() (*DpuExtensionServiceObservabilityLogging, bool) {
-	if o == nil || IsNil(o.Logging) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Logging, true
+	return o.Logging.Get(), o.Logging.IsSet()
 }
 
 // HasLogging returns a boolean if a field has been set.
 func (o *DpuExtensionServiceObservabilityConfig) HasLogging() bool {
-	if o != nil && !IsNil(o.Logging) {
+	if o != nil && o.Logging.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetLogging gets a reference to the given DpuExtensionServiceObservabilityLogging and assigns it to the Logging field.
+// SetLogging gets a reference to the given NullableDpuExtensionServiceObservabilityLogging and assigns it to the Logging field.
 func (o *DpuExtensionServiceObservabilityConfig) SetLogging(v DpuExtensionServiceObservabilityLogging) {
-	o.Logging = &v
+	o.Logging.Set(&v)
+}
+
+// SetLoggingNil sets the value for Logging to be an explicit nil
+func (o *DpuExtensionServiceObservabilityConfig) SetLoggingNil() {
+	o.Logging.Set(nil)
+}
+
+// UnsetLogging ensures that no value is present for Logging, not even an explicit nil
+func (o *DpuExtensionServiceObservabilityConfig) UnsetLogging() {
+	o.Logging.Unset()
 }
 
 func (o DpuExtensionServiceObservabilityConfig) MarshalJSON() ([]byte, error) {
@@ -162,11 +184,11 @@ func (o DpuExtensionServiceObservabilityConfig) ToMap() (map[string]interface{},
 	if o.Name.IsSet() {
 		toSerialize["name"] = o.Name.Get()
 	}
-	if !IsNil(o.Prometheus) {
-		toSerialize["prometheus"] = o.Prometheus
+	if o.Prometheus.IsSet() {
+		toSerialize["prometheus"] = o.Prometheus.Get()
 	}
-	if !IsNil(o.Logging) {
-		toSerialize["logging"] = o.Logging
+	if o.Logging.IsSet() {
+		toSerialize["logging"] = o.Logging.Get()
 	}
 	return toSerialize, nil
 }

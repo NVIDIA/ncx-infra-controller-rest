@@ -29,7 +29,7 @@ type Sku struct {
 	// List of machine IDs associated with this SKU
 	AssociatedMachineIds []string `json:"associatedMachineIds,omitempty"`
 	// Hardware components of this SKU
-	Components *SkuComponents `json:"components,omitempty"`
+	Components NullableSkuComponents `json:"components,omitempty"`
 	// ISO 8601 datetime when the SKU was created
 	Created *time.Time `json:"created,omitempty"`
 	// ISO 8601 datetime when the SKU was last updated
@@ -192,36 +192,47 @@ func (o *Sku) SetAssociatedMachineIds(v []string) {
 	o.AssociatedMachineIds = v
 }
 
-// GetComponents returns the Components field value if set, zero value otherwise.
+// GetComponents returns the Components field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *Sku) GetComponents() SkuComponents {
-	if o == nil || IsNil(o.Components) {
+	if o == nil || IsNil(o.Components.Get()) {
 		var ret SkuComponents
 		return ret
 	}
-	return *o.Components
+	return *o.Components.Get()
 }
 
 // GetComponentsOk returns a tuple with the Components field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *Sku) GetComponentsOk() (*SkuComponents, bool) {
-	if o == nil || IsNil(o.Components) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Components, true
+	return o.Components.Get(), o.Components.IsSet()
 }
 
 // HasComponents returns a boolean if a field has been set.
 func (o *Sku) HasComponents() bool {
-	if o != nil && !IsNil(o.Components) {
+	if o != nil && o.Components.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetComponents gets a reference to the given SkuComponents and assigns it to the Components field.
+// SetComponents gets a reference to the given NullableSkuComponents and assigns it to the Components field.
 func (o *Sku) SetComponents(v SkuComponents) {
-	o.Components = &v
+	o.Components.Set(&v)
+}
+
+// SetComponentsNil sets the value for Components to be an explicit nil
+func (o *Sku) SetComponentsNil() {
+	o.Components.Set(nil)
+}
+
+// UnsetComponents ensures that no value is present for Components, not even an explicit nil
+func (o *Sku) UnsetComponents() {
+	o.Components.Unset()
 }
 
 // GetCreated returns the Created field value if set, zero value otherwise.
@@ -310,8 +321,8 @@ func (o Sku) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.AssociatedMachineIds) {
 		toSerialize["associatedMachineIds"] = o.AssociatedMachineIds
 	}
-	if !IsNil(o.Components) {
-		toSerialize["components"] = o.Components
+	if o.Components.IsSet() {
+		toSerialize["components"] = o.Components.Get()
 	}
 	if !IsNil(o.Created) {
 		toSerialize["created"] = o.Created

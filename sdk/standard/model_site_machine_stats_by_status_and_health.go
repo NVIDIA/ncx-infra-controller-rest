@@ -19,14 +19,14 @@ var _ MappedNullable = &SiteMachineStatsByStatusAndHealth{}
 
 // SiteMachineStatsByStatusAndHealth Machine stats for a Site by status and health
 type SiteMachineStatsByStatusAndHealth struct {
-	Decommissioned *SiteMachineStatsByHealth `json:"Decommissioned,omitempty"`
-	Error          *SiteMachineStatsByHealth `json:"Error,omitempty"`
-	Initializing   *SiteMachineStatsByHealth `json:"Initializing,omitempty"`
-	InUse          *SiteMachineStatsByHealth `json:"InUse,omitempty"`
-	Maintenance    *SiteMachineStatsByHealth `json:"Maintenance,omitempty"`
-	Ready          *SiteMachineStatsByHealth `json:"Ready,omitempty"`
-	Reset          *SiteMachineStatsByHealth `json:"Reset,omitempty"`
-	Unknown        *SiteMachineStatsByHealth `json:"Unknown,omitempty"`
+	Decommissioned NullableSiteMachineStatsByHealth `json:"Decommissioned,omitempty"`
+	Error          NullableSiteMachineStatsByHealth `json:"Error,omitempty"`
+	Initializing   NullableSiteMachineStatsByHealth `json:"Initializing,omitempty"`
+	InUse          NullableSiteMachineStatsByHealth `json:"InUse,omitempty"`
+	Maintenance    NullableSiteMachineStatsByHealth `json:"Maintenance,omitempty"`
+	Ready          NullableSiteMachineStatsByHealth `json:"Ready,omitempty"`
+	Reset          NullableSiteMachineStatsByHealth `json:"Reset,omitempty"`
+	Unknown        NullableSiteMachineStatsByHealth `json:"Unknown,omitempty"`
 }
 
 // NewSiteMachineStatsByStatusAndHealth instantiates a new SiteMachineStatsByStatusAndHealth object
@@ -46,260 +46,348 @@ func NewSiteMachineStatsByStatusAndHealthWithDefaults() *SiteMachineStatsByStatu
 	return &this
 }
 
-// GetDecommissioned returns the Decommissioned field value if set, zero value otherwise.
+// GetDecommissioned returns the Decommissioned field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *SiteMachineStatsByStatusAndHealth) GetDecommissioned() SiteMachineStatsByHealth {
-	if o == nil || IsNil(o.Decommissioned) {
+	if o == nil || IsNil(o.Decommissioned.Get()) {
 		var ret SiteMachineStatsByHealth
 		return ret
 	}
-	return *o.Decommissioned
+	return *o.Decommissioned.Get()
 }
 
 // GetDecommissionedOk returns a tuple with the Decommissioned field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *SiteMachineStatsByStatusAndHealth) GetDecommissionedOk() (*SiteMachineStatsByHealth, bool) {
-	if o == nil || IsNil(o.Decommissioned) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Decommissioned, true
+	return o.Decommissioned.Get(), o.Decommissioned.IsSet()
 }
 
 // HasDecommissioned returns a boolean if a field has been set.
 func (o *SiteMachineStatsByStatusAndHealth) HasDecommissioned() bool {
-	if o != nil && !IsNil(o.Decommissioned) {
+	if o != nil && o.Decommissioned.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetDecommissioned gets a reference to the given SiteMachineStatsByHealth and assigns it to the Decommissioned field.
+// SetDecommissioned gets a reference to the given NullableSiteMachineStatsByHealth and assigns it to the Decommissioned field.
 func (o *SiteMachineStatsByStatusAndHealth) SetDecommissioned(v SiteMachineStatsByHealth) {
-	o.Decommissioned = &v
+	o.Decommissioned.Set(&v)
 }
 
-// GetError returns the Error field value if set, zero value otherwise.
+// SetDecommissionedNil sets the value for Decommissioned to be an explicit nil
+func (o *SiteMachineStatsByStatusAndHealth) SetDecommissionedNil() {
+	o.Decommissioned.Set(nil)
+}
+
+// UnsetDecommissioned ensures that no value is present for Decommissioned, not even an explicit nil
+func (o *SiteMachineStatsByStatusAndHealth) UnsetDecommissioned() {
+	o.Decommissioned.Unset()
+}
+
+// GetError returns the Error field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *SiteMachineStatsByStatusAndHealth) GetError() SiteMachineStatsByHealth {
-	if o == nil || IsNil(o.Error) {
+	if o == nil || IsNil(o.Error.Get()) {
 		var ret SiteMachineStatsByHealth
 		return ret
 	}
-	return *o.Error
+	return *o.Error.Get()
 }
 
 // GetErrorOk returns a tuple with the Error field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *SiteMachineStatsByStatusAndHealth) GetErrorOk() (*SiteMachineStatsByHealth, bool) {
-	if o == nil || IsNil(o.Error) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Error, true
+	return o.Error.Get(), o.Error.IsSet()
 }
 
 // HasError returns a boolean if a field has been set.
 func (o *SiteMachineStatsByStatusAndHealth) HasError() bool {
-	if o != nil && !IsNil(o.Error) {
+	if o != nil && o.Error.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetError gets a reference to the given SiteMachineStatsByHealth and assigns it to the Error field.
+// SetError gets a reference to the given NullableSiteMachineStatsByHealth and assigns it to the Error field.
 func (o *SiteMachineStatsByStatusAndHealth) SetError(v SiteMachineStatsByHealth) {
-	o.Error = &v
+	o.Error.Set(&v)
 }
 
-// GetInitializing returns the Initializing field value if set, zero value otherwise.
+// SetErrorNil sets the value for Error to be an explicit nil
+func (o *SiteMachineStatsByStatusAndHealth) SetErrorNil() {
+	o.Error.Set(nil)
+}
+
+// UnsetError ensures that no value is present for Error, not even an explicit nil
+func (o *SiteMachineStatsByStatusAndHealth) UnsetError() {
+	o.Error.Unset()
+}
+
+// GetInitializing returns the Initializing field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *SiteMachineStatsByStatusAndHealth) GetInitializing() SiteMachineStatsByHealth {
-	if o == nil || IsNil(o.Initializing) {
+	if o == nil || IsNil(o.Initializing.Get()) {
 		var ret SiteMachineStatsByHealth
 		return ret
 	}
-	return *o.Initializing
+	return *o.Initializing.Get()
 }
 
 // GetInitializingOk returns a tuple with the Initializing field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *SiteMachineStatsByStatusAndHealth) GetInitializingOk() (*SiteMachineStatsByHealth, bool) {
-	if o == nil || IsNil(o.Initializing) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Initializing, true
+	return o.Initializing.Get(), o.Initializing.IsSet()
 }
 
 // HasInitializing returns a boolean if a field has been set.
 func (o *SiteMachineStatsByStatusAndHealth) HasInitializing() bool {
-	if o != nil && !IsNil(o.Initializing) {
+	if o != nil && o.Initializing.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetInitializing gets a reference to the given SiteMachineStatsByHealth and assigns it to the Initializing field.
+// SetInitializing gets a reference to the given NullableSiteMachineStatsByHealth and assigns it to the Initializing field.
 func (o *SiteMachineStatsByStatusAndHealth) SetInitializing(v SiteMachineStatsByHealth) {
-	o.Initializing = &v
+	o.Initializing.Set(&v)
 }
 
-// GetInUse returns the InUse field value if set, zero value otherwise.
+// SetInitializingNil sets the value for Initializing to be an explicit nil
+func (o *SiteMachineStatsByStatusAndHealth) SetInitializingNil() {
+	o.Initializing.Set(nil)
+}
+
+// UnsetInitializing ensures that no value is present for Initializing, not even an explicit nil
+func (o *SiteMachineStatsByStatusAndHealth) UnsetInitializing() {
+	o.Initializing.Unset()
+}
+
+// GetInUse returns the InUse field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *SiteMachineStatsByStatusAndHealth) GetInUse() SiteMachineStatsByHealth {
-	if o == nil || IsNil(o.InUse) {
+	if o == nil || IsNil(o.InUse.Get()) {
 		var ret SiteMachineStatsByHealth
 		return ret
 	}
-	return *o.InUse
+	return *o.InUse.Get()
 }
 
 // GetInUseOk returns a tuple with the InUse field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *SiteMachineStatsByStatusAndHealth) GetInUseOk() (*SiteMachineStatsByHealth, bool) {
-	if o == nil || IsNil(o.InUse) {
+	if o == nil {
 		return nil, false
 	}
-	return o.InUse, true
+	return o.InUse.Get(), o.InUse.IsSet()
 }
 
 // HasInUse returns a boolean if a field has been set.
 func (o *SiteMachineStatsByStatusAndHealth) HasInUse() bool {
-	if o != nil && !IsNil(o.InUse) {
+	if o != nil && o.InUse.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetInUse gets a reference to the given SiteMachineStatsByHealth and assigns it to the InUse field.
+// SetInUse gets a reference to the given NullableSiteMachineStatsByHealth and assigns it to the InUse field.
 func (o *SiteMachineStatsByStatusAndHealth) SetInUse(v SiteMachineStatsByHealth) {
-	o.InUse = &v
+	o.InUse.Set(&v)
 }
 
-// GetMaintenance returns the Maintenance field value if set, zero value otherwise.
+// SetInUseNil sets the value for InUse to be an explicit nil
+func (o *SiteMachineStatsByStatusAndHealth) SetInUseNil() {
+	o.InUse.Set(nil)
+}
+
+// UnsetInUse ensures that no value is present for InUse, not even an explicit nil
+func (o *SiteMachineStatsByStatusAndHealth) UnsetInUse() {
+	o.InUse.Unset()
+}
+
+// GetMaintenance returns the Maintenance field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *SiteMachineStatsByStatusAndHealth) GetMaintenance() SiteMachineStatsByHealth {
-	if o == nil || IsNil(o.Maintenance) {
+	if o == nil || IsNil(o.Maintenance.Get()) {
 		var ret SiteMachineStatsByHealth
 		return ret
 	}
-	return *o.Maintenance
+	return *o.Maintenance.Get()
 }
 
 // GetMaintenanceOk returns a tuple with the Maintenance field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *SiteMachineStatsByStatusAndHealth) GetMaintenanceOk() (*SiteMachineStatsByHealth, bool) {
-	if o == nil || IsNil(o.Maintenance) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Maintenance, true
+	return o.Maintenance.Get(), o.Maintenance.IsSet()
 }
 
 // HasMaintenance returns a boolean if a field has been set.
 func (o *SiteMachineStatsByStatusAndHealth) HasMaintenance() bool {
-	if o != nil && !IsNil(o.Maintenance) {
+	if o != nil && o.Maintenance.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetMaintenance gets a reference to the given SiteMachineStatsByHealth and assigns it to the Maintenance field.
+// SetMaintenance gets a reference to the given NullableSiteMachineStatsByHealth and assigns it to the Maintenance field.
 func (o *SiteMachineStatsByStatusAndHealth) SetMaintenance(v SiteMachineStatsByHealth) {
-	o.Maintenance = &v
+	o.Maintenance.Set(&v)
 }
 
-// GetReady returns the Ready field value if set, zero value otherwise.
+// SetMaintenanceNil sets the value for Maintenance to be an explicit nil
+func (o *SiteMachineStatsByStatusAndHealth) SetMaintenanceNil() {
+	o.Maintenance.Set(nil)
+}
+
+// UnsetMaintenance ensures that no value is present for Maintenance, not even an explicit nil
+func (o *SiteMachineStatsByStatusAndHealth) UnsetMaintenance() {
+	o.Maintenance.Unset()
+}
+
+// GetReady returns the Ready field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *SiteMachineStatsByStatusAndHealth) GetReady() SiteMachineStatsByHealth {
-	if o == nil || IsNil(o.Ready) {
+	if o == nil || IsNil(o.Ready.Get()) {
 		var ret SiteMachineStatsByHealth
 		return ret
 	}
-	return *o.Ready
+	return *o.Ready.Get()
 }
 
 // GetReadyOk returns a tuple with the Ready field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *SiteMachineStatsByStatusAndHealth) GetReadyOk() (*SiteMachineStatsByHealth, bool) {
-	if o == nil || IsNil(o.Ready) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Ready, true
+	return o.Ready.Get(), o.Ready.IsSet()
 }
 
 // HasReady returns a boolean if a field has been set.
 func (o *SiteMachineStatsByStatusAndHealth) HasReady() bool {
-	if o != nil && !IsNil(o.Ready) {
+	if o != nil && o.Ready.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetReady gets a reference to the given SiteMachineStatsByHealth and assigns it to the Ready field.
+// SetReady gets a reference to the given NullableSiteMachineStatsByHealth and assigns it to the Ready field.
 func (o *SiteMachineStatsByStatusAndHealth) SetReady(v SiteMachineStatsByHealth) {
-	o.Ready = &v
+	o.Ready.Set(&v)
 }
 
-// GetReset returns the Reset field value if set, zero value otherwise.
+// SetReadyNil sets the value for Ready to be an explicit nil
+func (o *SiteMachineStatsByStatusAndHealth) SetReadyNil() {
+	o.Ready.Set(nil)
+}
+
+// UnsetReady ensures that no value is present for Ready, not even an explicit nil
+func (o *SiteMachineStatsByStatusAndHealth) UnsetReady() {
+	o.Ready.Unset()
+}
+
+// GetReset returns the Reset field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *SiteMachineStatsByStatusAndHealth) GetReset() SiteMachineStatsByHealth {
-	if o == nil || IsNil(o.Reset) {
+	if o == nil || IsNil(o.Reset.Get()) {
 		var ret SiteMachineStatsByHealth
 		return ret
 	}
-	return *o.Reset
+	return *o.Reset.Get()
 }
 
 // GetResetOk returns a tuple with the Reset field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *SiteMachineStatsByStatusAndHealth) GetResetOk() (*SiteMachineStatsByHealth, bool) {
-	if o == nil || IsNil(o.Reset) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Reset, true
+	return o.Reset.Get(), o.Reset.IsSet()
 }
 
 // HasReset returns a boolean if a field has been set.
 func (o *SiteMachineStatsByStatusAndHealth) HasReset() bool {
-	if o != nil && !IsNil(o.Reset) {
+	if o != nil && o.Reset.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetReset gets a reference to the given SiteMachineStatsByHealth and assigns it to the Reset field.
+// SetReset gets a reference to the given NullableSiteMachineStatsByHealth and assigns it to the Reset field.
 func (o *SiteMachineStatsByStatusAndHealth) SetReset(v SiteMachineStatsByHealth) {
-	o.Reset = &v
+	o.Reset.Set(&v)
 }
 
-// GetUnknown returns the Unknown field value if set, zero value otherwise.
+// SetResetNil sets the value for Reset to be an explicit nil
+func (o *SiteMachineStatsByStatusAndHealth) SetResetNil() {
+	o.Reset.Set(nil)
+}
+
+// UnsetReset ensures that no value is present for Reset, not even an explicit nil
+func (o *SiteMachineStatsByStatusAndHealth) UnsetReset() {
+	o.Reset.Unset()
+}
+
+// GetUnknown returns the Unknown field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *SiteMachineStatsByStatusAndHealth) GetUnknown() SiteMachineStatsByHealth {
-	if o == nil || IsNil(o.Unknown) {
+	if o == nil || IsNil(o.Unknown.Get()) {
 		var ret SiteMachineStatsByHealth
 		return ret
 	}
-	return *o.Unknown
+	return *o.Unknown.Get()
 }
 
 // GetUnknownOk returns a tuple with the Unknown field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *SiteMachineStatsByStatusAndHealth) GetUnknownOk() (*SiteMachineStatsByHealth, bool) {
-	if o == nil || IsNil(o.Unknown) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Unknown, true
+	return o.Unknown.Get(), o.Unknown.IsSet()
 }
 
 // HasUnknown returns a boolean if a field has been set.
 func (o *SiteMachineStatsByStatusAndHealth) HasUnknown() bool {
-	if o != nil && !IsNil(o.Unknown) {
+	if o != nil && o.Unknown.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetUnknown gets a reference to the given SiteMachineStatsByHealth and assigns it to the Unknown field.
+// SetUnknown gets a reference to the given NullableSiteMachineStatsByHealth and assigns it to the Unknown field.
 func (o *SiteMachineStatsByStatusAndHealth) SetUnknown(v SiteMachineStatsByHealth) {
-	o.Unknown = &v
+	o.Unknown.Set(&v)
+}
+
+// SetUnknownNil sets the value for Unknown to be an explicit nil
+func (o *SiteMachineStatsByStatusAndHealth) SetUnknownNil() {
+	o.Unknown.Set(nil)
+}
+
+// UnsetUnknown ensures that no value is present for Unknown, not even an explicit nil
+func (o *SiteMachineStatsByStatusAndHealth) UnsetUnknown() {
+	o.Unknown.Unset()
 }
 
 func (o SiteMachineStatsByStatusAndHealth) MarshalJSON() ([]byte, error) {
@@ -312,29 +400,29 @@ func (o SiteMachineStatsByStatusAndHealth) MarshalJSON() ([]byte, error) {
 
 func (o SiteMachineStatsByStatusAndHealth) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
-	if !IsNil(o.Decommissioned) {
-		toSerialize["Decommissioned"] = o.Decommissioned
+	if o.Decommissioned.IsSet() {
+		toSerialize["Decommissioned"] = o.Decommissioned.Get()
 	}
-	if !IsNil(o.Error) {
-		toSerialize["Error"] = o.Error
+	if o.Error.IsSet() {
+		toSerialize["Error"] = o.Error.Get()
 	}
-	if !IsNil(o.Initializing) {
-		toSerialize["Initializing"] = o.Initializing
+	if o.Initializing.IsSet() {
+		toSerialize["Initializing"] = o.Initializing.Get()
 	}
-	if !IsNil(o.InUse) {
-		toSerialize["InUse"] = o.InUse
+	if o.InUse.IsSet() {
+		toSerialize["InUse"] = o.InUse.Get()
 	}
-	if !IsNil(o.Maintenance) {
-		toSerialize["Maintenance"] = o.Maintenance
+	if o.Maintenance.IsSet() {
+		toSerialize["Maintenance"] = o.Maintenance.Get()
 	}
-	if !IsNil(o.Ready) {
-		toSerialize["Ready"] = o.Ready
+	if o.Ready.IsSet() {
+		toSerialize["Ready"] = o.Ready.Get()
 	}
-	if !IsNil(o.Reset) {
-		toSerialize["Reset"] = o.Reset
+	if o.Reset.IsSet() {
+		toSerialize["Reset"] = o.Reset.Get()
 	}
-	if !IsNil(o.Unknown) {
-		toSerialize["Unknown"] = o.Unknown
+	if o.Unknown.IsSet() {
+		toSerialize["Unknown"] = o.Unknown.Get()
 	}
 	return toSerialize, nil
 }

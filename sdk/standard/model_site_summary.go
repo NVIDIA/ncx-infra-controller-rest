@@ -26,9 +26,9 @@ type SiteSummary struct {
 	// Indicates if Serial Console is enabled for the Site by the Provider
 	IsSerialConsoleEnabled *bool `json:"isSerialConsoleEnabled,omitempty"`
 	// Indicates if the Site is currently reachable from Cloud
-	IsOnline     *bool             `json:"isOnline,omitempty"`
-	Capabilities *SiteCapabilities `json:"capabilities,omitempty"`
-	Status       *SiteStatus       `json:"status,omitempty"`
+	IsOnline     *bool                    `json:"isOnline,omitempty"`
+	Capabilities NullableSiteCapabilities `json:"capabilities,omitempty"`
+	Status       *SiteStatus              `json:"status,omitempty"`
 }
 
 // NewSiteSummary instantiates a new SiteSummary object
@@ -208,36 +208,47 @@ func (o *SiteSummary) SetIsOnline(v bool) {
 	o.IsOnline = &v
 }
 
-// GetCapabilities returns the Capabilities field value if set, zero value otherwise.
+// GetCapabilities returns the Capabilities field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *SiteSummary) GetCapabilities() SiteCapabilities {
-	if o == nil || IsNil(o.Capabilities) {
+	if o == nil || IsNil(o.Capabilities.Get()) {
 		var ret SiteCapabilities
 		return ret
 	}
-	return *o.Capabilities
+	return *o.Capabilities.Get()
 }
 
 // GetCapabilitiesOk returns a tuple with the Capabilities field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *SiteSummary) GetCapabilitiesOk() (*SiteCapabilities, bool) {
-	if o == nil || IsNil(o.Capabilities) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Capabilities, true
+	return o.Capabilities.Get(), o.Capabilities.IsSet()
 }
 
 // HasCapabilities returns a boolean if a field has been set.
 func (o *SiteSummary) HasCapabilities() bool {
-	if o != nil && !IsNil(o.Capabilities) {
+	if o != nil && o.Capabilities.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetCapabilities gets a reference to the given SiteCapabilities and assigns it to the Capabilities field.
+// SetCapabilities gets a reference to the given NullableSiteCapabilities and assigns it to the Capabilities field.
 func (o *SiteSummary) SetCapabilities(v SiteCapabilities) {
-	o.Capabilities = &v
+	o.Capabilities.Set(&v)
+}
+
+// SetCapabilitiesNil sets the value for Capabilities to be an explicit nil
+func (o *SiteSummary) SetCapabilitiesNil() {
+	o.Capabilities.Set(nil)
+}
+
+// UnsetCapabilities ensures that no value is present for Capabilities, not even an explicit nil
+func (o *SiteSummary) UnsetCapabilities() {
+	o.Capabilities.Unset()
 }
 
 // GetStatus returns the Status field value if set, zero value otherwise.
@@ -297,8 +308,8 @@ func (o SiteSummary) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.IsOnline) {
 		toSerialize["isOnline"] = o.IsOnline
 	}
-	if !IsNil(o.Capabilities) {
-		toSerialize["capabilities"] = o.Capabilities
+	if o.Capabilities.IsSet() {
+		toSerialize["capabilities"] = o.Capabilities.Get()
 	}
 	if !IsNil(o.Status) {
 		toSerialize["status"] = o.Status

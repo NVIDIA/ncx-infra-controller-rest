@@ -24,9 +24,9 @@ type ComponentDiff struct {
 	// RLA internal component UUID
 	Id *string `json:"id,omitempty"`
 	// Component ID assigned by the component manager service
-	ComponentId *string        `json:"componentId,omitempty"`
-	Expected    *RackComponent `json:"expected,omitempty"`
-	Actual      *RackComponent `json:"actual,omitempty"`
+	ComponentId *string               `json:"componentId,omitempty"`
+	Expected    NullableRackComponent `json:"expected,omitempty"`
+	Actual      NullableRackComponent `json:"actual,omitempty"`
 	// List of field differences (populated when type is DiffTypeDrift)
 	FieldDiffs []FieldDiff `json:"fieldDiffs,omitempty"`
 }
@@ -144,68 +144,90 @@ func (o *ComponentDiff) SetComponentId(v string) {
 	o.ComponentId = &v
 }
 
-// GetExpected returns the Expected field value if set, zero value otherwise.
+// GetExpected returns the Expected field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *ComponentDiff) GetExpected() RackComponent {
-	if o == nil || IsNil(o.Expected) {
+	if o == nil || IsNil(o.Expected.Get()) {
 		var ret RackComponent
 		return ret
 	}
-	return *o.Expected
+	return *o.Expected.Get()
 }
 
 // GetExpectedOk returns a tuple with the Expected field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *ComponentDiff) GetExpectedOk() (*RackComponent, bool) {
-	if o == nil || IsNil(o.Expected) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Expected, true
+	return o.Expected.Get(), o.Expected.IsSet()
 }
 
 // HasExpected returns a boolean if a field has been set.
 func (o *ComponentDiff) HasExpected() bool {
-	if o != nil && !IsNil(o.Expected) {
+	if o != nil && o.Expected.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetExpected gets a reference to the given RackComponent and assigns it to the Expected field.
+// SetExpected gets a reference to the given NullableRackComponent and assigns it to the Expected field.
 func (o *ComponentDiff) SetExpected(v RackComponent) {
-	o.Expected = &v
+	o.Expected.Set(&v)
 }
 
-// GetActual returns the Actual field value if set, zero value otherwise.
+// SetExpectedNil sets the value for Expected to be an explicit nil
+func (o *ComponentDiff) SetExpectedNil() {
+	o.Expected.Set(nil)
+}
+
+// UnsetExpected ensures that no value is present for Expected, not even an explicit nil
+func (o *ComponentDiff) UnsetExpected() {
+	o.Expected.Unset()
+}
+
+// GetActual returns the Actual field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *ComponentDiff) GetActual() RackComponent {
-	if o == nil || IsNil(o.Actual) {
+	if o == nil || IsNil(o.Actual.Get()) {
 		var ret RackComponent
 		return ret
 	}
-	return *o.Actual
+	return *o.Actual.Get()
 }
 
 // GetActualOk returns a tuple with the Actual field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *ComponentDiff) GetActualOk() (*RackComponent, bool) {
-	if o == nil || IsNil(o.Actual) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Actual, true
+	return o.Actual.Get(), o.Actual.IsSet()
 }
 
 // HasActual returns a boolean if a field has been set.
 func (o *ComponentDiff) HasActual() bool {
-	if o != nil && !IsNil(o.Actual) {
+	if o != nil && o.Actual.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetActual gets a reference to the given RackComponent and assigns it to the Actual field.
+// SetActual gets a reference to the given NullableRackComponent and assigns it to the Actual field.
 func (o *ComponentDiff) SetActual(v RackComponent) {
-	o.Actual = &v
+	o.Actual.Set(&v)
+}
+
+// SetActualNil sets the value for Actual to be an explicit nil
+func (o *ComponentDiff) SetActualNil() {
+	o.Actual.Set(nil)
+}
+
+// UnsetActual ensures that no value is present for Actual, not even an explicit nil
+func (o *ComponentDiff) UnsetActual() {
+	o.Actual.Unset()
 }
 
 // GetFieldDiffs returns the FieldDiffs field value if set, zero value otherwise.
@@ -259,11 +281,11 @@ func (o ComponentDiff) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.ComponentId) {
 		toSerialize["componentId"] = o.ComponentId
 	}
-	if !IsNil(o.Expected) {
-		toSerialize["expected"] = o.Expected
+	if o.Expected.IsSet() {
+		toSerialize["expected"] = o.Expected.Get()
 	}
-	if !IsNil(o.Actual) {
-		toSerialize["actual"] = o.Actual
+	if o.Actual.IsSet() {
+		toSerialize["actual"] = o.Actual.Get()
 	}
 	if !IsNil(o.FieldDiffs) {
 		toSerialize["fieldDiffs"] = o.FieldDiffs

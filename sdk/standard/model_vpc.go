@@ -45,7 +45,7 @@ type VPC struct {
 	// ID of the Network Security Group attached to the VPC
 	NetworkSecurityGroupId NullableString `json:"networkSecurityGroupId,omitempty"`
 	// Propagation details for the attached Network Security Group
-	NetworkSecurityGroupPropagationDetails *NetworkSecurityGroupPropagationDetails `json:"networkSecurityGroupPropagationDetails,omitempty"`
+	NetworkSecurityGroupPropagationDetails NullableNetworkSecurityGroupPropagationDetails `json:"networkSecurityGroupPropagationDetails,omitempty"`
 	// ID of the default NVLink Logical Partition that GPUs for all Instances in the VPC will attach to
 	NvLinkLogicalPartitionId NullableString `json:"nvLinkLogicalPartitionId,omitempty"`
 	// String key value pairs describing VPC labels
@@ -516,36 +516,47 @@ func (o *VPC) UnsetNetworkSecurityGroupId() {
 	o.NetworkSecurityGroupId.Unset()
 }
 
-// GetNetworkSecurityGroupPropagationDetails returns the NetworkSecurityGroupPropagationDetails field value if set, zero value otherwise.
+// GetNetworkSecurityGroupPropagationDetails returns the NetworkSecurityGroupPropagationDetails field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *VPC) GetNetworkSecurityGroupPropagationDetails() NetworkSecurityGroupPropagationDetails {
-	if o == nil || IsNil(o.NetworkSecurityGroupPropagationDetails) {
+	if o == nil || IsNil(o.NetworkSecurityGroupPropagationDetails.Get()) {
 		var ret NetworkSecurityGroupPropagationDetails
 		return ret
 	}
-	return *o.NetworkSecurityGroupPropagationDetails
+	return *o.NetworkSecurityGroupPropagationDetails.Get()
 }
 
 // GetNetworkSecurityGroupPropagationDetailsOk returns a tuple with the NetworkSecurityGroupPropagationDetails field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *VPC) GetNetworkSecurityGroupPropagationDetailsOk() (*NetworkSecurityGroupPropagationDetails, bool) {
-	if o == nil || IsNil(o.NetworkSecurityGroupPropagationDetails) {
+	if o == nil {
 		return nil, false
 	}
-	return o.NetworkSecurityGroupPropagationDetails, true
+	return o.NetworkSecurityGroupPropagationDetails.Get(), o.NetworkSecurityGroupPropagationDetails.IsSet()
 }
 
 // HasNetworkSecurityGroupPropagationDetails returns a boolean if a field has been set.
 func (o *VPC) HasNetworkSecurityGroupPropagationDetails() bool {
-	if o != nil && !IsNil(o.NetworkSecurityGroupPropagationDetails) {
+	if o != nil && o.NetworkSecurityGroupPropagationDetails.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetNetworkSecurityGroupPropagationDetails gets a reference to the given NetworkSecurityGroupPropagationDetails and assigns it to the NetworkSecurityGroupPropagationDetails field.
+// SetNetworkSecurityGroupPropagationDetails gets a reference to the given NullableNetworkSecurityGroupPropagationDetails and assigns it to the NetworkSecurityGroupPropagationDetails field.
 func (o *VPC) SetNetworkSecurityGroupPropagationDetails(v NetworkSecurityGroupPropagationDetails) {
-	o.NetworkSecurityGroupPropagationDetails = &v
+	o.NetworkSecurityGroupPropagationDetails.Set(&v)
+}
+
+// SetNetworkSecurityGroupPropagationDetailsNil sets the value for NetworkSecurityGroupPropagationDetails to be an explicit nil
+func (o *VPC) SetNetworkSecurityGroupPropagationDetailsNil() {
+	o.NetworkSecurityGroupPropagationDetails.Set(nil)
+}
+
+// UnsetNetworkSecurityGroupPropagationDetails ensures that no value is present for NetworkSecurityGroupPropagationDetails, not even an explicit nil
+func (o *VPC) UnsetNetworkSecurityGroupPropagationDetails() {
+	o.NetworkSecurityGroupPropagationDetails.Unset()
 }
 
 // GetNvLinkLogicalPartitionId returns the NvLinkLogicalPartitionId field value if set, zero value otherwise (both if not set or set to explicit null).
@@ -591,9 +602,9 @@ func (o *VPC) UnsetNvLinkLogicalPartitionId() {
 	o.NvLinkLogicalPartitionId.Unset()
 }
 
-// GetLabels returns the Labels field value if set, zero value otherwise.
+// GetLabels returns the Labels field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *VPC) GetLabels() map[string]string {
-	if o == nil || IsNil(o.Labels) {
+	if o == nil {
 		var ret map[string]string
 		return ret
 	}
@@ -602,6 +613,7 @@ func (o *VPC) GetLabels() map[string]string {
 
 // GetLabelsOk returns a tuple with the Labels field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *VPC) GetLabelsOk() (map[string]string, bool) {
 	if o == nil || IsNil(o.Labels) {
 		return map[string]string{}, false
@@ -797,13 +809,13 @@ func (o VPC) ToMap() (map[string]interface{}, error) {
 	if o.NetworkSecurityGroupId.IsSet() {
 		toSerialize["networkSecurityGroupId"] = o.NetworkSecurityGroupId.Get()
 	}
-	if !IsNil(o.NetworkSecurityGroupPropagationDetails) {
-		toSerialize["networkSecurityGroupPropagationDetails"] = o.NetworkSecurityGroupPropagationDetails
+	if o.NetworkSecurityGroupPropagationDetails.IsSet() {
+		toSerialize["networkSecurityGroupPropagationDetails"] = o.NetworkSecurityGroupPropagationDetails.Get()
 	}
 	if o.NvLinkLogicalPartitionId.IsSet() {
 		toSerialize["nvLinkLogicalPartitionId"] = o.NvLinkLogicalPartitionId.Get()
 	}
-	if !IsNil(o.Labels) {
+	if o.Labels != nil {
 		toSerialize["labels"] = o.Labels
 	}
 	if !IsNil(o.Status) {

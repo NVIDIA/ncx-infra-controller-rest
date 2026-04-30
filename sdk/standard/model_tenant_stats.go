@@ -19,9 +19,9 @@ var _ MappedNullable = &TenantStats{}
 
 // TenantStats Provide operational stats for Tenant
 type TenantStats struct {
-	Instance *InstanceCountByStatus `json:"instance,omitempty"`
-	Vpc      *VpcCountByStatus      `json:"vpc,omitempty"`
-	Subnet   *SubnetCountByStatus   `json:"subnet,omitempty"`
+	Instance NullableInstanceCountByStatus `json:"instance,omitempty"`
+	Vpc      NullableVpcCountByStatus      `json:"vpc,omitempty"`
+	Subnet   NullableSubnetCountByStatus   `json:"subnet,omitempty"`
 }
 
 // NewTenantStats instantiates a new TenantStats object
@@ -41,100 +41,133 @@ func NewTenantStatsWithDefaults() *TenantStats {
 	return &this
 }
 
-// GetInstance returns the Instance field value if set, zero value otherwise.
+// GetInstance returns the Instance field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *TenantStats) GetInstance() InstanceCountByStatus {
-	if o == nil || IsNil(o.Instance) {
+	if o == nil || IsNil(o.Instance.Get()) {
 		var ret InstanceCountByStatus
 		return ret
 	}
-	return *o.Instance
+	return *o.Instance.Get()
 }
 
 // GetInstanceOk returns a tuple with the Instance field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *TenantStats) GetInstanceOk() (*InstanceCountByStatus, bool) {
-	if o == nil || IsNil(o.Instance) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Instance, true
+	return o.Instance.Get(), o.Instance.IsSet()
 }
 
 // HasInstance returns a boolean if a field has been set.
 func (o *TenantStats) HasInstance() bool {
-	if o != nil && !IsNil(o.Instance) {
+	if o != nil && o.Instance.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetInstance gets a reference to the given InstanceCountByStatus and assigns it to the Instance field.
+// SetInstance gets a reference to the given NullableInstanceCountByStatus and assigns it to the Instance field.
 func (o *TenantStats) SetInstance(v InstanceCountByStatus) {
-	o.Instance = &v
+	o.Instance.Set(&v)
 }
 
-// GetVpc returns the Vpc field value if set, zero value otherwise.
+// SetInstanceNil sets the value for Instance to be an explicit nil
+func (o *TenantStats) SetInstanceNil() {
+	o.Instance.Set(nil)
+}
+
+// UnsetInstance ensures that no value is present for Instance, not even an explicit nil
+func (o *TenantStats) UnsetInstance() {
+	o.Instance.Unset()
+}
+
+// GetVpc returns the Vpc field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *TenantStats) GetVpc() VpcCountByStatus {
-	if o == nil || IsNil(o.Vpc) {
+	if o == nil || IsNil(o.Vpc.Get()) {
 		var ret VpcCountByStatus
 		return ret
 	}
-	return *o.Vpc
+	return *o.Vpc.Get()
 }
 
 // GetVpcOk returns a tuple with the Vpc field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *TenantStats) GetVpcOk() (*VpcCountByStatus, bool) {
-	if o == nil || IsNil(o.Vpc) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Vpc, true
+	return o.Vpc.Get(), o.Vpc.IsSet()
 }
 
 // HasVpc returns a boolean if a field has been set.
 func (o *TenantStats) HasVpc() bool {
-	if o != nil && !IsNil(o.Vpc) {
+	if o != nil && o.Vpc.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetVpc gets a reference to the given VpcCountByStatus and assigns it to the Vpc field.
+// SetVpc gets a reference to the given NullableVpcCountByStatus and assigns it to the Vpc field.
 func (o *TenantStats) SetVpc(v VpcCountByStatus) {
-	o.Vpc = &v
+	o.Vpc.Set(&v)
 }
 
-// GetSubnet returns the Subnet field value if set, zero value otherwise.
+// SetVpcNil sets the value for Vpc to be an explicit nil
+func (o *TenantStats) SetVpcNil() {
+	o.Vpc.Set(nil)
+}
+
+// UnsetVpc ensures that no value is present for Vpc, not even an explicit nil
+func (o *TenantStats) UnsetVpc() {
+	o.Vpc.Unset()
+}
+
+// GetSubnet returns the Subnet field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *TenantStats) GetSubnet() SubnetCountByStatus {
-	if o == nil || IsNil(o.Subnet) {
+	if o == nil || IsNil(o.Subnet.Get()) {
 		var ret SubnetCountByStatus
 		return ret
 	}
-	return *o.Subnet
+	return *o.Subnet.Get()
 }
 
 // GetSubnetOk returns a tuple with the Subnet field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *TenantStats) GetSubnetOk() (*SubnetCountByStatus, bool) {
-	if o == nil || IsNil(o.Subnet) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Subnet, true
+	return o.Subnet.Get(), o.Subnet.IsSet()
 }
 
 // HasSubnet returns a boolean if a field has been set.
 func (o *TenantStats) HasSubnet() bool {
-	if o != nil && !IsNil(o.Subnet) {
+	if o != nil && o.Subnet.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetSubnet gets a reference to the given SubnetCountByStatus and assigns it to the Subnet field.
+// SetSubnet gets a reference to the given NullableSubnetCountByStatus and assigns it to the Subnet field.
 func (o *TenantStats) SetSubnet(v SubnetCountByStatus) {
-	o.Subnet = &v
+	o.Subnet.Set(&v)
+}
+
+// SetSubnetNil sets the value for Subnet to be an explicit nil
+func (o *TenantStats) SetSubnetNil() {
+	o.Subnet.Set(nil)
+}
+
+// UnsetSubnet ensures that no value is present for Subnet, not even an explicit nil
+func (o *TenantStats) UnsetSubnet() {
+	o.Subnet.Unset()
 }
 
 func (o TenantStats) MarshalJSON() ([]byte, error) {
@@ -147,14 +180,14 @@ func (o TenantStats) MarshalJSON() ([]byte, error) {
 
 func (o TenantStats) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
-	if !IsNil(o.Instance) {
-		toSerialize["instance"] = o.Instance
+	if o.Instance.IsSet() {
+		toSerialize["instance"] = o.Instance.Get()
 	}
-	if !IsNil(o.Vpc) {
-		toSerialize["vpc"] = o.Vpc
+	if o.Vpc.IsSet() {
+		toSerialize["vpc"] = o.Vpc.Get()
 	}
-	if !IsNil(o.Subnet) {
-		toSerialize["subnet"] = o.Subnet
+	if o.Subnet.IsSet() {
+		toSerialize["subnet"] = o.Subnet.Get()
 	}
 	return toSerialize, nil
 }

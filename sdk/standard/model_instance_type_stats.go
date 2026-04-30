@@ -19,12 +19,12 @@ var _ MappedNullable = &InstanceTypeStats{}
 
 // InstanceTypeStats Stats for an instance type including allocation details
 type InstanceTypeStats struct {
-	Id               *string                 `json:"id,omitempty"`
-	Name             *string                 `json:"name,omitempty"`
-	Allocated        *int32                  `json:"allocated,omitempty"`
-	UsedMachineStats *MachineStatusBreakdown `json:"usedMachineStats,omitempty"`
-	MaxAllocatable   *int32                  `json:"maxAllocatable,omitempty"`
-	Allocations      []AllocationStats       `json:"allocations,omitempty"`
+	Id               *string                        `json:"id,omitempty"`
+	Name             *string                        `json:"name,omitempty"`
+	Allocated        *int32                         `json:"allocated,omitempty"`
+	UsedMachineStats NullableMachineStatusBreakdown `json:"usedMachineStats,omitempty"`
+	MaxAllocatable   *int32                         `json:"maxAllocatable,omitempty"`
+	Allocations      []AllocationStats              `json:"allocations,omitempty"`
 }
 
 // NewInstanceTypeStats instantiates a new InstanceTypeStats object
@@ -140,36 +140,47 @@ func (o *InstanceTypeStats) SetAllocated(v int32) {
 	o.Allocated = &v
 }
 
-// GetUsedMachineStats returns the UsedMachineStats field value if set, zero value otherwise.
+// GetUsedMachineStats returns the UsedMachineStats field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *InstanceTypeStats) GetUsedMachineStats() MachineStatusBreakdown {
-	if o == nil || IsNil(o.UsedMachineStats) {
+	if o == nil || IsNil(o.UsedMachineStats.Get()) {
 		var ret MachineStatusBreakdown
 		return ret
 	}
-	return *o.UsedMachineStats
+	return *o.UsedMachineStats.Get()
 }
 
 // GetUsedMachineStatsOk returns a tuple with the UsedMachineStats field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *InstanceTypeStats) GetUsedMachineStatsOk() (*MachineStatusBreakdown, bool) {
-	if o == nil || IsNil(o.UsedMachineStats) {
+	if o == nil {
 		return nil, false
 	}
-	return o.UsedMachineStats, true
+	return o.UsedMachineStats.Get(), o.UsedMachineStats.IsSet()
 }
 
 // HasUsedMachineStats returns a boolean if a field has been set.
 func (o *InstanceTypeStats) HasUsedMachineStats() bool {
-	if o != nil && !IsNil(o.UsedMachineStats) {
+	if o != nil && o.UsedMachineStats.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetUsedMachineStats gets a reference to the given MachineStatusBreakdown and assigns it to the UsedMachineStats field.
+// SetUsedMachineStats gets a reference to the given NullableMachineStatusBreakdown and assigns it to the UsedMachineStats field.
 func (o *InstanceTypeStats) SetUsedMachineStats(v MachineStatusBreakdown) {
-	o.UsedMachineStats = &v
+	o.UsedMachineStats.Set(&v)
+}
+
+// SetUsedMachineStatsNil sets the value for UsedMachineStats to be an explicit nil
+func (o *InstanceTypeStats) SetUsedMachineStatsNil() {
+	o.UsedMachineStats.Set(nil)
+}
+
+// UnsetUsedMachineStats ensures that no value is present for UsedMachineStats, not even an explicit nil
+func (o *InstanceTypeStats) UnsetUsedMachineStats() {
+	o.UsedMachineStats.Unset()
 }
 
 // GetMaxAllocatable returns the MaxAllocatable field value if set, zero value otherwise.
@@ -255,8 +266,8 @@ func (o InstanceTypeStats) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.Allocated) {
 		toSerialize["allocated"] = o.Allocated
 	}
-	if !IsNil(o.UsedMachineStats) {
-		toSerialize["usedMachineStats"] = o.UsedMachineStats
+	if o.UsedMachineStats.IsSet() {
+		toSerialize["usedMachineStats"] = o.UsedMachineStats.Get()
 	}
 	if !IsNil(o.MaxAllocatable) {
 		toSerialize["maxAllocatable"] = o.MaxAllocatable

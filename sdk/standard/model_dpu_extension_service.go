@@ -35,7 +35,7 @@ type DpuExtensionService struct {
 	// Latest version of the DPU Extension Service
 	Version NullableString `json:"version,omitempty"`
 	// Details for the latest version of the DPU Extension Service
-	VersionInfo *DpuExtensionServiceVersionInfo `json:"versionInfo,omitempty"`
+	VersionInfo NullableDpuExtensionServiceVersionInfo `json:"versionInfo,omitempty"`
 	// Latest and past versions of this DPU Extension Service that have not been deleted and are available for deployment
 	ActiveVersions []string `json:"activeVersions,omitempty"`
 	// Status of the DPU Extension Service
@@ -311,36 +311,47 @@ func (o *DpuExtensionService) UnsetVersion() {
 	o.Version.Unset()
 }
 
-// GetVersionInfo returns the VersionInfo field value if set, zero value otherwise.
+// GetVersionInfo returns the VersionInfo field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *DpuExtensionService) GetVersionInfo() DpuExtensionServiceVersionInfo {
-	if o == nil || IsNil(o.VersionInfo) {
+	if o == nil || IsNil(o.VersionInfo.Get()) {
 		var ret DpuExtensionServiceVersionInfo
 		return ret
 	}
-	return *o.VersionInfo
+	return *o.VersionInfo.Get()
 }
 
 // GetVersionInfoOk returns a tuple with the VersionInfo field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *DpuExtensionService) GetVersionInfoOk() (*DpuExtensionServiceVersionInfo, bool) {
-	if o == nil || IsNil(o.VersionInfo) {
+	if o == nil {
 		return nil, false
 	}
-	return o.VersionInfo, true
+	return o.VersionInfo.Get(), o.VersionInfo.IsSet()
 }
 
 // HasVersionInfo returns a boolean if a field has been set.
 func (o *DpuExtensionService) HasVersionInfo() bool {
-	if o != nil && !IsNil(o.VersionInfo) {
+	if o != nil && o.VersionInfo.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetVersionInfo gets a reference to the given DpuExtensionServiceVersionInfo and assigns it to the VersionInfo field.
+// SetVersionInfo gets a reference to the given NullableDpuExtensionServiceVersionInfo and assigns it to the VersionInfo field.
 func (o *DpuExtensionService) SetVersionInfo(v DpuExtensionServiceVersionInfo) {
-	o.VersionInfo = &v
+	o.VersionInfo.Set(&v)
+}
+
+// SetVersionInfoNil sets the value for VersionInfo to be an explicit nil
+func (o *DpuExtensionService) SetVersionInfoNil() {
+	o.VersionInfo.Set(nil)
+}
+
+// UnsetVersionInfo ensures that no value is present for VersionInfo, not even an explicit nil
+func (o *DpuExtensionService) UnsetVersionInfo() {
+	o.VersionInfo.Unset()
 }
 
 // GetActiveVersions returns the ActiveVersions field value if set, zero value otherwise.
@@ -534,8 +545,8 @@ func (o DpuExtensionService) ToMap() (map[string]interface{}, error) {
 	if o.Version.IsSet() {
 		toSerialize["version"] = o.Version.Get()
 	}
-	if !IsNil(o.VersionInfo) {
-		toSerialize["versionInfo"] = o.VersionInfo
+	if o.VersionInfo.IsSet() {
+		toSerialize["versionInfo"] = o.VersionInfo.Get()
 	}
 	if !IsNil(o.ActiveVersions) {
 		toSerialize["activeVersions"] = o.ActiveVersions
