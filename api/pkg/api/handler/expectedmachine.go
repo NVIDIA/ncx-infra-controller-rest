@@ -93,6 +93,62 @@ func ValidateProviderOrTenantSiteAccess(ctx context.Context, logger zerolog.Logg
 	return hasAccess, nil
 }
 
+// expectedMachineToProto builds the workflow proto. BMC credentials and
+// labels are passed separately because they may come from the API request
+// rather than the DB record (BMC credentials aren't persisted at all).
+func expectedMachineToProto(em *cdbm.ExpectedMachine, defaultBmcUsername, defaultBmcPassword *string, labels map[string]string) *cwssaws.ExpectedMachine {
+	proto := &cwssaws.ExpectedMachine{
+		Id:                       &cwssaws.UUID{Value: em.ID.String()},
+		BmcMacAddress:            em.BmcMacAddress,
+		ChassisSerialNumber:      em.ChassisSerialNumber,
+		FallbackDpuSerialNumbers: em.FallbackDpuSerialNumbers,
+		SkuId:                    em.SkuID,
+	}
+
+	if em.RackID != nil {
+		proto.RackId = &cwssaws.RackId{Id: *em.RackID}
+	}
+	if em.Name != nil {
+		proto.Name = em.Name
+	}
+	if em.Manufacturer != nil {
+		proto.Manufacturer = em.Manufacturer
+	}
+	if em.Model != nil {
+		proto.Model = em.Model
+	}
+	if em.Description != nil {
+		proto.Description = em.Description
+	}
+	if em.FirmwareVersion != nil {
+		proto.FirmwareVersion = em.FirmwareVersion
+	}
+	if em.SlotID != nil {
+		proto.SlotId = em.SlotID
+	}
+	if em.TrayIdx != nil {
+		proto.TrayIdx = em.TrayIdx
+	}
+	if em.HostID != nil {
+		proto.HostId = em.HostID
+	}
+
+	if defaultBmcUsername != nil {
+		proto.BmcUsername = *defaultBmcUsername
+	}
+	if defaultBmcPassword != nil {
+		proto.BmcPassword = *defaultBmcPassword
+	}
+
+	if protoLabels := util.ProtobufLabelsFromAPILabels(labels); protoLabels != nil {
+		proto.Metadata = &cwssaws.Metadata{
+			Labels: protoLabels,
+		}
+	}
+
+	return proto
+}
+
 // ~~~~~ Create Handler ~~~~~ //
 
 // CreateExpectedMachineHandler is the API Handler for creating new ExpectedMachine
@@ -260,66 +316,12 @@ func (cemh CreateExpectedMachineHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Expected Machine due to DB error", nil)
 	}
 
-	// Build the create request for workflow
-	// BMC credentials come from API request since they're not stored in DB
-	createExpectedMachineRequest := &cwssaws.ExpectedMachine{
-		Id:                       &cwssaws.UUID{Value: expectedMachine.ID.String()},
-		BmcMacAddress:            expectedMachine.BmcMacAddress,
-		ChassisSerialNumber:      expectedMachine.ChassisSerialNumber,
-		FallbackDpuSerialNumbers: expectedMachine.FallbackDpuSerialNumbers,
-		SkuId:                    expectedMachine.SkuID,
-	}
-
-	if expectedMachine.RackID != nil {
-		createExpectedMachineRequest.RackId = &cwssaws.RackId{Id: *expectedMachine.RackID}
-	}
-
-	if expectedMachine.Name != nil {
-		createExpectedMachineRequest.Name = expectedMachine.Name
-	}
-
-	if expectedMachine.Manufacturer != nil {
-		createExpectedMachineRequest.Manufacturer = expectedMachine.Manufacturer
-	}
-
-	if expectedMachine.Model != nil {
-		createExpectedMachineRequest.Model = expectedMachine.Model
-	}
-
-	if expectedMachine.Description != nil {
-		createExpectedMachineRequest.Description = expectedMachine.Description
-	}
-
-	if expectedMachine.FirmwareVersion != nil {
-		createExpectedMachineRequest.FirmwareVersion = expectedMachine.FirmwareVersion
-	}
-
-	if expectedMachine.SlotID != nil {
-		createExpectedMachineRequest.SlotId = expectedMachine.SlotID
-	}
-
-	if expectedMachine.TrayIdx != nil {
-		createExpectedMachineRequest.TrayIdx = expectedMachine.TrayIdx
-	}
-
-	if expectedMachine.HostID != nil {
-		createExpectedMachineRequest.HostId = expectedMachine.HostID
-	}
-
-	if apiRequest.DefaultBmcUsername != nil {
-		createExpectedMachineRequest.BmcUsername = *apiRequest.DefaultBmcUsername
-	}
-
-	if apiRequest.DefaultBmcPassword != nil {
-		createExpectedMachineRequest.BmcPassword = *apiRequest.DefaultBmcPassword
-	}
-
-	protoLabels := util.ProtobufLabelsFromAPILabels(apiRequest.Labels)
-	if protoLabels != nil {
-		createExpectedMachineRequest.Metadata = &cwssaws.Metadata{
-			Labels: protoLabels,
-		}
-	}
+	createExpectedMachineRequest := expectedMachineToProto(
+		expectedMachine,
+		apiRequest.DefaultBmcUsername,
+		apiRequest.DefaultBmcPassword,
+		apiRequest.Labels,
+	)
 
 	logger.Info().Msg("triggering Expected Machine create workflow on Site")
 
@@ -785,66 +787,12 @@ func (uemh UpdateExpectedMachineHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Expected Machine due to DB error", nil)
 	}
 
-	// Build the update request for workflow
-	// BMC credentials come from API request since they're not stored in DB
-	updateExpectedMachineRequest := &cwssaws.ExpectedMachine{
-		Id:                       &cwssaws.UUID{Value: expectedMachine.ID.String()},
-		BmcMacAddress:            updatedExpectedMachine.BmcMacAddress,
-		ChassisSerialNumber:      updatedExpectedMachine.ChassisSerialNumber,
-		FallbackDpuSerialNumbers: updatedExpectedMachine.FallbackDpuSerialNumbers,
-		SkuId:                    updatedExpectedMachine.SkuID,
-	}
-
-	if updatedExpectedMachine.RackID != nil {
-		updateExpectedMachineRequest.RackId = &cwssaws.RackId{Id: *updatedExpectedMachine.RackID}
-	}
-
-	if updatedExpectedMachine.Name != nil {
-		updateExpectedMachineRequest.Name = updatedExpectedMachine.Name
-	}
-
-	if updatedExpectedMachine.Manufacturer != nil {
-		updateExpectedMachineRequest.Manufacturer = updatedExpectedMachine.Manufacturer
-	}
-
-	if updatedExpectedMachine.Model != nil {
-		updateExpectedMachineRequest.Model = updatedExpectedMachine.Model
-	}
-
-	if updatedExpectedMachine.Description != nil {
-		updateExpectedMachineRequest.Description = updatedExpectedMachine.Description
-	}
-
-	if updatedExpectedMachine.FirmwareVersion != nil {
-		updateExpectedMachineRequest.FirmwareVersion = updatedExpectedMachine.FirmwareVersion
-	}
-
-	if updatedExpectedMachine.SlotID != nil {
-		updateExpectedMachineRequest.SlotId = updatedExpectedMachine.SlotID
-	}
-
-	if updatedExpectedMachine.TrayIdx != nil {
-		updateExpectedMachineRequest.TrayIdx = updatedExpectedMachine.TrayIdx
-	}
-
-	if updatedExpectedMachine.HostID != nil {
-		updateExpectedMachineRequest.HostId = updatedExpectedMachine.HostID
-	}
-
-	if apiRequest.DefaultBmcUsername != nil {
-		updateExpectedMachineRequest.BmcUsername = *apiRequest.DefaultBmcUsername
-	}
-
-	if apiRequest.DefaultBmcPassword != nil {
-		updateExpectedMachineRequest.BmcPassword = *apiRequest.DefaultBmcPassword
-	}
-
-	protoLabels := util.ProtobufLabelsFromAPILabels(apiRequest.Labels)
-	if protoLabels != nil {
-		updateExpectedMachineRequest.Metadata = &cwssaws.Metadata{
-			Labels: protoLabels,
-		}
-	}
+	updateExpectedMachineRequest := expectedMachineToProto(
+		updatedExpectedMachine,
+		apiRequest.DefaultBmcUsername,
+		apiRequest.DefaultBmcPassword,
+		apiRequest.Labels,
+	)
 
 	logger.Info().Msg("triggering ExpectedMachine update workflow")
 
