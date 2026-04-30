@@ -185,6 +185,7 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 	var dbit *cdbm.InstanceType
 	var dbParentIPBlock *cdbm.IPBlock
 	var serr error
+
 	// Check if the new constraint value is different from the existing value
 	if ac.ConstraintValue != apiRequest.ConstraintValue {
 		// Start a database transaction
@@ -321,7 +322,7 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 
 			// get parent IPBlock
 			ipbDAO := cdbm.NewIPBlockDAO(uach.dbSession)
-			dbParentIPBlock, serr := ipbDAO.GetByID(ctx, tx, ac.ResourceTypeID, nil)
+			dbParentIPBlock, serr = ipbDAO.GetByID(ctx, tx, ac.ResourceTypeID, nil)
 			if serr != nil {
 				logger.Error().Err(serr).Msg("error retrieving IP Block for Allocation Constraint")
 				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve IP Block for Allocation Constraint, DB error", nil)
