@@ -1372,6 +1372,23 @@ func (iur *APIInstanceUpdateRequest) IsInterfaceUpdateRequest() bool {
 	return iur.Interfaces != nil || iur.InfiniBandInterfaces != nil || iur.NVLinkInterfaces != nil
 }
 
+// NeedsCapabilityValidation returns true when the update touches interface or
+// secondary-VPC networking so Instance Type vs Machine capabilities must be validated.
+// Pure metadata/OS/NSG/SSH updates return false so existing instances without
+// machine capability rows still work.
+func (iur *APIInstanceUpdateRequest) NeedsCapabilityValidation() bool {
+	if iur == nil {
+		return false
+	}
+	if iur.IsInterfaceUpdateRequest() {
+		return true
+	}
+	if iur.SecondaryVpcIDs != nil {
+		return true
+	}
+	return false
+}
+
 // IsRebootRequest checks if the request is an instance reboot request
 func (iur *APIInstanceUpdateRequest) IsRebootRequest() bool {
 	return iur.TriggerReboot != nil && *iur.TriggerReboot

@@ -895,6 +895,20 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 			}
 		}
 
+		// Verify that the Machine's capabilities match the Instance Type's capabilities
+		if machine.InstanceTypeID != nil && machine.ID != "" {
+			if apiErr := common.VerifyInstanceTypeMachineCapabilitiesMatch(ctx, logger, cih.dbSession, *machine.InstanceTypeID, machine.ID); apiErr != nil {
+				return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
+			}
+		}
+
+		// Acquire a lock on the MachineID
+		err = tx.TryAcquireAdvisoryLock(ctx, cdb.GetAdvisoryLockIDFromString(machine.ID), nil)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to acquire advisory lock on Machine")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to lock Machine: %s for Instance creation. It is likely being considered for another Instance creation request", machine.ID), nil)
+		}
+
 		// Update the machine status to assigned
 		updateInput := cdbm.MachineUpdateInput{
 			MachineID:  machine.ID,
@@ -996,14 +1010,10 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 		}
 
 		// Select unallocated Machine for the requested instance type
-		machine, err = common.GetUnallocatedMachineForInstanceType(ctx, tx, cih.dbSession, instanceType)
-		if err != nil {
-			if err == common.ErrInstanceTypeMachineNotFound {
-				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest,
-					"No Machines are available for specified Instance Type", nil)
-			}
-			logger.Error().Err(err).Msg("error retrieving Machine from DB for Instance Type")
-			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve available baremetal Machines for specified Instance Type", nil)
+		var apiErr *cutil.APIError
+		machine, apiErr = common.GetUnallocatedMachineForInstanceType(ctx, tx, cih.dbSession, *instanceType, logger)
+		if apiErr != nil {
+			return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
 		}
 	} // if apiRequest.InstanceTypeID != nil
 
@@ -2439,6 +2449,16 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 		if allRequestedVpcIds.Cardinality() != allFoundVpcIds.Cardinality() {
 			logger.Error().Msg("one or more Interfaces in request data specify VPC Prefixes that do not belong to VPCs specified in `vpcId` or `secondaryVpcIds`")
 			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "One or more Interfaces in request data specify VPC Prefixes that do not belong to VPCs specified in `vpcId` or `secondaryVpcIds`", nil)
+		}
+	}
+
+	// Verify Instance Type and Machine capabilities match when the request
+	// changes networking (after interface / VPC validation so more specific
+	// errors are returned first). Skip for metadata-only updates.
+	if apiRequest.NeedsCapabilityValidation() &&
+		instance.InstanceTypeID != nil && machine != nil {
+		if apiErr := common.VerifyInstanceTypeMachineCapabilitiesMatch(ctx, logger, uih.dbSession, *instance.InstanceTypeID, machine.ID); apiErr != nil {
+			return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
 		}
 	}
 

@@ -315,14 +315,10 @@ func AcquireInstanceTypeQuotaLock(ctx context.Context, tx *cdb.Tx, tenantID uuid
 }
 
 // GetUnallocatedMachineForInstanceType provides unallocatd machine based on instancetype
-func GetUnallocatedMachineForInstanceType(ctx context.Context, tx *cdb.Tx, dbSession *cdb.Session, instancetype *cdbm.InstanceType) (*cdbm.Machine, error) {
-	if instancetype == nil {
-		return nil, ErrInvalidFunctionParams
-	}
-
+func GetUnallocatedMachineForInstanceType(ctx context.Context, tx *cdb.Tx, dbSession *cdb.Session, instanceType cdbm.InstanceType, logger zerolog.Logger) (*cdbm.Machine, *cutil.APIError) {
 	// tx has to be set, required acquring lock
 	if tx == nil {
-		return nil, ErrInvalidFunctionParams
+		return nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve available Machines, transaction required for Machine selection", nil)
 	}
 
 	mcDAO := cdbm.NewMachineDAO(dbSession)
@@ -330,14 +326,15 @@ func GetUnallocatedMachineForInstanceType(ctx context.Context, tx *cdb.Tx, dbSes
 	// Get all available Machines for the Instance Type
 	// Since this query is occurring outside of a lock, we will have to double check availability of Machines
 	filterInput := cdbm.MachineFilterInput{
-		SiteID:          instancetype.SiteID,
-		InstanceTypeIDs: []uuid.UUID{instancetype.ID},
+		SiteID:          instanceType.SiteID,
+		InstanceTypeIDs: []uuid.UUID{instanceType.ID},
 		IsAssigned:      cdb.GetBoolPtr(false),
 		Statuses:        []string{cdbm.MachineStatusReady},
+		ExcludeMetadata: true,
 	}
 	machines, _, err := mcDAO.GetAll(ctx, tx, filterInput, cdbp.PageInput{Limit: cdb.GetIntPtr(cdbp.TotalLimit)}, nil)
 	if err != nil {
-		return nil, err
+		return nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve available Machines for Instance Type, DB error", nil)
 	}
 
 	// Randomize the list of machines.
@@ -353,6 +350,8 @@ func GetUnallocatedMachineForInstanceType(ctx context.Context, tx *cdb.Tx, dbSes
 			machines[i], machines[j] = machines[j], machines[i]
 		},
 	)
+
+	capabilityMismatchCount := 0
 
 	if len(machines) > 0 {
 		for _, mc := range machines {
@@ -377,12 +376,19 @@ func GetUnallocatedMachineForInstanceType(ctx context.Context, tx *cdb.Tx, dbSes
 				continue
 			}
 
+			// Verify that the Machine's capabilities match the Instance Type's capabilities.
+			if apiErr := VerifyInstanceTypeMachineCapabilitiesMatch(ctx, logger, dbSession, instanceType.ID, mc.ID); apiErr != nil {
+				capabilityMismatchCount++
+				continue
+			}
+
 			// We should now be able to proceed with the allocation
 			// Update the machine status to assigned
 			updateInput := cdbm.MachineUpdateInput{
 				MachineID:  mc.ID,
 				IsAssigned: cdb.GetBoolPtr(true),
 			}
+
 			// return the updated machine
 			mcu, err := mcDAO.Update(ctx, tx, updateInput)
 			if err != nil {
@@ -391,7 +397,12 @@ func GetUnallocatedMachineForInstanceType(ctx context.Context, tx *cdb.Tx, dbSes
 			return mcu, nil
 		}
 	}
-	return nil, ErrInstanceTypeMachineNotFound
+
+	if capabilityMismatchCount > 0 {
+		return nil, cutil.NewAPIError(http.StatusNotAcceptable, fmt.Sprintf("%d Machines for this Instance Type were found with capability mismatch, unable to select a Machine for provisioning", capabilityMismatchCount), nil)
+	}
+
+	return nil, cutil.NewAPIError(http.StatusNotFound, "No Machines are available for specified Instance Type", nil)
 }
 
 // GetCountOfMachinesForInstanceType is a utility function to return count of
@@ -958,6 +969,20 @@ func MatchInstanceTypeCapabilitiesForMachines(ctx context.Context, logger zerolo
 		}
 	}
 	return true, nil, nil
+}
+
+// VerifyInstanceTypeMachineCapabilitiesMatch validates that the Machine's
+// capabilities satisfy the Instance Type's capabilities. It returns a non-nil
+// *cutil.APIError when validation fails, or nil on success.
+func VerifyInstanceTypeMachineCapabilitiesMatch(ctx context.Context, logger zerolog.Logger, dbSession *cdb.Session, instanceTypeID uuid.UUID, machineID string) *cutil.APIError {
+	isMatch, _, apiErr := MatchInstanceTypeCapabilitiesForMachines(ctx, logger, dbSession, instanceTypeID, []string{machineID})
+	if apiErr != nil {
+		return apiErr
+	}
+	if !isMatch {
+		return cutil.NewAPIError(http.StatusBadRequest, fmt.Sprintf("Capabilities for Machine: %v do not match Instance Type's Capabilities", machineID), nil)
+	}
+	return nil
 }
 
 // GetAllocationResourceTypeMaps is a utility function to get resource info based on resource type in allocation constraints
