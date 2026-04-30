@@ -63,11 +63,10 @@ func (mepsi *ManageExpectedPowerShelfInventory) DiscoverExpectedPowerShelfInvent
 	}
 
 	// Get Site Controller gRPC client
-	carbideClient := mepsi.carbideAtomicClient.GetClient()
-	if carbideClient == nil {
-		return cclient.ErrClientNotConnected
+	forgeClient, err := mepsi.carbideAtomicClient.GetForgeClient()
+	if err != nil {
+		return err
 	}
-	forgeClient := carbideClient.Carbide()
 
 	// Call GetAllExpectedPowerShelves to get full list of ExpectedPowerShelves on Site
 	epsList, err := forgeClient.GetAllExpectedPowerShelves(ctx, &emptypb.Empty{})
@@ -290,11 +289,10 @@ func (meps *ManageExpectedPowerShelf) CreateExpectedPowerShelfOnSite(ctx context
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := meps.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
-		return cclient.ErrClientNotConnected
+	forgeClient, err := meps.CarbideAtomicClient.GetForgeClient()
+	if err != nil {
+		return err
 	}
-	forgeClient := carbideClient.Carbide()
 
 	// Call Forge gRPC endpoint
 	_, err = forgeClient.AddExpectedPowerShelf(ctx, request)
@@ -330,11 +328,10 @@ func (meps *ManageExpectedPowerShelf) UpdateExpectedPowerShelfOnSite(ctx context
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := meps.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
-		return cclient.ErrClientNotConnected
+	forgeClient, err := meps.CarbideAtomicClient.GetForgeClient()
+	if err != nil {
+		return err
 	}
-	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.UpdateExpectedPowerShelf(ctx, request)
 	if err != nil {
@@ -464,11 +461,10 @@ func (meps *ManageExpectedPowerShelf) DeleteExpectedPowerShelfOnSite(ctx context
 	}
 
 	// Call Site Controller gRPC endpoint
-	carbideClient := meps.CarbideAtomicClient.GetClient()
-	if carbideClient == nil {
-		return cclient.ErrClientNotConnected
+	forgeClient, err := meps.CarbideAtomicClient.GetForgeClient()
+	if err != nil {
+		return err
 	}
-	forgeClient := carbideClient.Carbide()
 
 	_, err = forgeClient.DeleteExpectedPowerShelf(ctx, request)
 	if err != nil {
