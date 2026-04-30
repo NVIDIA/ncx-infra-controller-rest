@@ -297,7 +297,16 @@ func (cac *CarbideAtomicClient) GetForgeClient() (wflows.ForgeClient, error) {
 	if client == nil {
 		return nil, ErrClientNotConnected
 	}
-	return client.Carbide(), nil
+
+	// It's true that NewCarbideClient always populates the inner carbide
+	// field, BUT, guard against zero-value CarbideClient instances slipping
+	// in via direct construction. Without this, a misconstructed wrapper
+	// would yield (nil, nil) and break things.
+	forge := client.Carbide()
+	if forge == nil {
+		return nil, ErrClientNotConnected
+	}
+	return forge, nil
 }
 
 // CheckAndReloadCerts continuously monitors the TLS certificates for changes.
