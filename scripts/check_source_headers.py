@@ -24,6 +24,11 @@ from pathlib import Path
 
 
 APACHE_LICENSE = "SPDX-License-Identifier: Apache-2.0"
+IPAM_LICENSE = "SPDX-License-Identifier: MIT AND Apache-2.0"
+IPAM_COPYRIGHT = "SPDX-FileCopyrightText: Copyright (c) 2020 The metal-stack Authors"
+NVIDIA_COPYRIGHT = (
+    "SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved."
+)
 PROPRIETARY_LICENSE = "SPDX-License-Identifier: LicenseRef-NvidiaProprietary"
 DEFAULT_COPYRIGHT = "Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved."
 HEADER_WINDOW = 4096
@@ -42,7 +47,6 @@ EXCLUDED_DIRS = {
     "vendor",
 }
 EXCLUDED_PREFIXES = (
-    "ipam/",
     "temporal-helm/",
 )
 EXCLUDED_FILE_SUFFIXES = (
@@ -85,6 +89,10 @@ def is_generated(text: str) -> bool:
     return "Code generated" in header or "DO NOT EDIT" in header or "@generated" in header
 
 
+def is_ipam_source(path: Path) -> bool:
+    return path.as_posix().startswith("ipam/") and path.suffix in {".go", ".proto"}
+
+
 def is_candidate(repo: Path, path: Path) -> bool:
     if any(part in EXCLUDED_DIRS for part in path.parts):
         return False
@@ -93,6 +101,8 @@ def is_candidate(repo: Path, path: Path) -> bool:
         return False
     if path_text.endswith(EXCLUDED_FILE_SUFFIXES) or "/fixtures/" in path_text:
         return False
+    if path_text.startswith("ipam/"):
+        return is_ipam_source(path)
 
     full_path = repo / path
     return (
@@ -104,7 +114,7 @@ def is_candidate(repo: Path, path: Path) -> bool:
 
 
 def comment_style(path: Path) -> str:
-    if path.suffix in BLOCK_COMMENT_EXTENSIONS:
+    if path.suffix in BLOCK_COMMENT_EXTENSIONS or path.suffix == ".proto":
         return "block"
     return "hash"
 
@@ -156,6 +166,16 @@ def hash_header(copyright: str) -> str:
 """
 
 
+def ipam_header() -> str:
+    return f"""/*
+ * {IPAM_COPYRIGHT}
+ * {NVIDIA_COPYRIGHT}
+ * {IPAM_LICENSE}
+ */
+
+"""
+
+
 def strip_proprietary_hash_header(text: str) -> tuple[str, str]:
     match = HASH_PROPRIETARY_RE.match(text)
     if not match or PROPRIETARY_LICENSE not in match.group("header"):
@@ -173,6 +193,9 @@ def apache_header(path: Path, text: str) -> str:
 
 
 def fix_text(path: Path, text: str) -> str:
+    if is_ipam_source(path):
+        return add_ipam_header(text)
+
     header = apache_header(path, text)
 
     if comment_style(path) == "block":
@@ -194,6 +217,25 @@ def fix_text(path: Path, text: str) -> str:
     return shebang + header + body.lstrip("\n")
 
 
+def add_ipam_header(text: str) -> str:
+    if text.startswith("// Code generated"):
+        lines = text.splitlines(keepends=True)
+        split_at = 0
+        for index, line in enumerate(lines):
+            if line.startswith("//") or not line.strip():
+                split_at = index + 1
+                continue
+            break
+        return "".join(lines[:split_at]) + ipam_header() + "".join(lines[split_at:]).lstrip("\n")
+
+    return ipam_header() + text.lstrip("\n")
+
+
+def ipam_header_missing(text: str) -> bool:
+    header = text[:HEADER_WINDOW]
+    return not all(marker in header for marker in (IPAM_COPYRIGHT, NVIDIA_COPYRIGHT, IPAM_LICENSE))
+
+
 def scan(repo: Path, *, fix: bool) -> int:
     missing: list[Path] = []
     proprietary: list[Path] = []
@@ -205,23 +247,28 @@ def scan(repo: Path, *, fix: bool) -> int:
 
         full_path = repo / path
         text = full_path.read_text(errors="ignore")
-        if is_generated(text):
+        if is_ipam_source(path):
+            if ipam_header_missing(text):
+                missing.append(path)
+            else:
+                continue
+        elif is_generated(text):
             continue
-
-        header = text[:HEADER_WINDOW]
-        if PROPRIETARY_LICENSE in header:
-            proprietary.append(path)
-        elif APACHE_LICENSE not in header:
-            missing.append(path)
         else:
-            continue
+            header = text[:HEADER_WINDOW]
+            if PROPRIETARY_LICENSE in header:
+                proprietary.append(path)
+            elif APACHE_LICENSE not in header:
+                missing.append(path)
+            else:
+                continue
 
         if fix:
             full_path.write_text(fix_text(path, text))
             fixed.append(path)
 
     if fixed:
-        print(f"Updated Apache-2.0 headers in {len(fixed)} files.")
+        print(f"Updated source headers in {len(fixed)} files.")
         missing = []
         proprietary = []
 
@@ -236,7 +283,7 @@ def scan(repo: Path, *, fix: bool) -> int:
                 print(f"  {path}")
         return 1 if not fix else 0
 
-    print("All checked source files have Apache-2.0 headers.")
+    print("All checked source files have expected headers.")
     return 0
 
 
