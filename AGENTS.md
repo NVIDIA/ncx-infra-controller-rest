@@ -6,7 +6,7 @@ This file provides guidance for AI coding agents working in the
 ## Project Overview
 
 **NVIDIA Infra Controller REST** is a collection of Go microservices that comprise
-the management backend for NCX Infra Controller, exposed as a REST API. It
+the management backend for NVIDIA Infra Controller, exposed as a REST API. It
 provides multi-tenant, API-driven bare-metal lifecycle management, working in
 concert with [NVIDIA Infra Controller Core](https://github.com/NVIDIA/infra-controller-core)
 for on-site hardware operations.
