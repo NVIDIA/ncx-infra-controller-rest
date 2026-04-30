@@ -144,7 +144,7 @@ func TestCreateExpectedPowerShelfHandler_Handle(t *testing.T) {
 	mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, "CreateExpectedPowerShelf", mock.Anything).Return(mockWorkflowRun, nil)
 	scp.IDClientMap[site.ID.String()] = mockTemporalClient
 
-	handler := NewCreateExpectedPowerShelfHandler(dbSession, nil, scp, cfg)
+	handler := NewCreateExpectedPowerShelfHandler(dbSession, scp, cfg)
 
 	createMockUser := func(org string) *cdbm.User {
 		return &cdbm.User{
@@ -309,7 +309,7 @@ func TestGetAllExpectedPowerShelfHandler_Handle(t *testing.T) {
 
 	ctx := context.Background()
 	cfg := &config.Config{}
-	handler := NewGetAllExpectedPowerShelfHandler(dbSession, nil, cfg)
+	handler := NewGetAllExpectedPowerShelfHandler(dbSession, cfg)
 
 	org := "test-org"
 	infraProv, site := testExpectedPowerShelfSetupTestData(t, dbSession, org)
@@ -494,7 +494,7 @@ func TestGetExpectedPowerShelfHandler_Handle(t *testing.T) {
 	ctx := context.Background()
 
 	cfg := &config.Config{}
-	handler := NewGetExpectedPowerShelfHandler(dbSession, nil, cfg)
+	handler := NewGetExpectedPowerShelfHandler(dbSession, cfg)
 
 	org := "test-org"
 	infraProv, site := testExpectedPowerShelfSetupTestData(t, dbSession, org)
@@ -698,7 +698,7 @@ func TestUpdateExpectedPowerShelfHandler_Handle(t *testing.T) {
 	mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, "UpdateExpectedPowerShelf", mock.Anything).Return(mockWorkflowRun, nil)
 	scp.IDClientMap[site.ID.String()] = mockTemporalClient
 
-	handler := NewUpdateExpectedPowerShelfHandler(dbSession, nil, scp, cfg)
+	handler := NewUpdateExpectedPowerShelfHandler(dbSession, scp, cfg)
 
 	createMockUser := func(org string) *cdbm.User {
 		return &cdbm.User{
@@ -853,7 +853,7 @@ func TestDeleteExpectedPowerShelfHandler_Handle(t *testing.T) {
 	mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, "DeleteExpectedPowerShelf", mock.Anything).Return(mockWorkflowRun, nil)
 	scp.IDClientMap[site.ID.String()] = mockTemporalClient
 
-	handler := NewDeleteExpectedPowerShelfHandler(dbSession, nil, scp, cfg)
+	handler := NewDeleteExpectedPowerShelfHandler(dbSession, scp, cfg)
 
 	createMockUser := func(org string) *cdbm.User {
 		return &cdbm.User{

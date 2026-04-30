@@ -144,7 +144,7 @@ func TestCreateExpectedSwitchHandler_Handle(t *testing.T) {
 	mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, "CreateExpectedSwitch", mock.Anything).Return(mockWorkflowRun, nil)
 	scp.IDClientMap[site.ID.String()] = mockTemporalClient
 
-	handler := NewCreateExpectedSwitchHandler(dbSession, nil, scp, cfg)
+	handler := NewCreateExpectedSwitchHandler(dbSession, scp, cfg)
 
 	createMockUser := func(org string) *cdbm.User {
 		return &cdbm.User{
@@ -308,7 +308,7 @@ func TestGetAllExpectedSwitchHandler_Handle(t *testing.T) {
 
 	ctx := context.Background()
 	cfg := &config.Config{}
-	handler := NewGetAllExpectedSwitchHandler(dbSession, nil, cfg)
+	handler := NewGetAllExpectedSwitchHandler(dbSession, cfg)
 
 	org := "test-org"
 	infraProv, site := testExpectedSwitchSetupTestData(t, dbSession, org)
@@ -493,7 +493,7 @@ func TestGetExpectedSwitchHandler_Handle(t *testing.T) {
 	ctx := context.Background()
 
 	cfg := &config.Config{}
-	handler := NewGetExpectedSwitchHandler(dbSession, nil, cfg)
+	handler := NewGetExpectedSwitchHandler(dbSession, cfg)
 
 	org := "test-org"
 	infraProv, site := testExpectedSwitchSetupTestData(t, dbSession, org)
@@ -697,7 +697,7 @@ func TestUpdateExpectedSwitchHandler_Handle(t *testing.T) {
 	mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, "UpdateExpectedSwitch", mock.Anything).Return(mockWorkflowRun, nil)
 	scp.IDClientMap[site.ID.String()] = mockTemporalClient
 
-	handler := NewUpdateExpectedSwitchHandler(dbSession, nil, scp, cfg)
+	handler := NewUpdateExpectedSwitchHandler(dbSession, scp, cfg)
 
 	createMockUser := func(org string) *cdbm.User {
 		return &cdbm.User{
@@ -852,7 +852,7 @@ func TestDeleteExpectedSwitchHandler_Handle(t *testing.T) {
 	mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, "DeleteExpectedSwitch", mock.Anything).Return(mockWorkflowRun, nil)
 	scp.IDClientMap[site.ID.String()] = mockTemporalClient
 
-	handler := NewDeleteExpectedSwitchHandler(dbSession, nil, scp, cfg)
+	handler := NewDeleteExpectedSwitchHandler(dbSession, scp, cfg)
 
 	createMockUser := func(org string) *cdbm.User {
 		return &cdbm.User{

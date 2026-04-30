@@ -49,17 +49,15 @@ import (
 // CreateExpectedPowerShelfHandler is the API Handler for creating new ExpectedPowerShelf
 type CreateExpectedPowerShelfHandler struct {
 	dbSession  *cdb.Session
-	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
 	tracerSpan *cutil.TracerSpan
 }
 
 // NewCreateExpectedPowerShelfHandler initializes and returns a new handler for creating ExpectedPowerShelf
-func NewCreateExpectedPowerShelfHandler(dbSession *cdb.Session, tc tclient.Client, scp *sc.ClientPool, cfg *config.Config) CreateExpectedPowerShelfHandler {
+func NewCreateExpectedPowerShelfHandler(dbSession *cdb.Session, scp *sc.ClientPool, cfg *config.Config) CreateExpectedPowerShelfHandler {
 	return CreateExpectedPowerShelfHandler{
 		dbSession:  dbSession,
-		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
 		tracerSpan: cutil.NewTracerSpan(),
@@ -304,16 +302,14 @@ func (cepsh CreateExpectedPowerShelfHandler) Handle(c echo.Context) error {
 // GetAllExpectedPowerShelfHandler is the API Handler for getting all ExpectedPowerShelves
 type GetAllExpectedPowerShelfHandler struct {
 	dbSession  *cdb.Session
-	tc         tclient.Client
 	cfg        *config.Config
 	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllExpectedPowerShelfHandler initializes and returns a new handler for getting all ExpectedPowerShelves
-func NewGetAllExpectedPowerShelfHandler(dbSession *cdb.Session, tc tclient.Client, cfg *config.Config) GetAllExpectedPowerShelfHandler {
+func NewGetAllExpectedPowerShelfHandler(dbSession *cdb.Session, cfg *config.Config) GetAllExpectedPowerShelfHandler {
 	return GetAllExpectedPowerShelfHandler{
 		dbSession:  dbSession,
-		tc:         tc,
 		cfg:        cfg,
 		tracerSpan: cutil.NewTracerSpan(),
 	}
@@ -466,16 +462,14 @@ func (gaepsh GetAllExpectedPowerShelfHandler) Handle(c echo.Context) error {
 // GetExpectedPowerShelfHandler is the API Handler for retrieving ExpectedPowerShelf
 type GetExpectedPowerShelfHandler struct {
 	dbSession  *cdb.Session
-	tc         tclient.Client
 	cfg        *config.Config
 	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetExpectedPowerShelfHandler initializes and returns a new handler to retrieve ExpectedPowerShelf
-func NewGetExpectedPowerShelfHandler(dbSession *cdb.Session, tc tclient.Client, cfg *config.Config) GetExpectedPowerShelfHandler {
+func NewGetExpectedPowerShelfHandler(dbSession *cdb.Session, cfg *config.Config) GetExpectedPowerShelfHandler {
 	return GetExpectedPowerShelfHandler{
 		dbSession:  dbSession,
-		tc:         tc,
 		cfg:        cfg,
 		tracerSpan: cutil.NewTracerSpan(),
 	}
@@ -570,17 +564,15 @@ func (gepsh GetExpectedPowerShelfHandler) Handle(c echo.Context) error {
 // UpdateExpectedPowerShelfHandler is the API Handler for updating a ExpectedPowerShelf
 type UpdateExpectedPowerShelfHandler struct {
 	dbSession  *cdb.Session
-	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
 	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateExpectedPowerShelfHandler initializes and returns a new handler for updating ExpectedPowerShelf
-func NewUpdateExpectedPowerShelfHandler(dbSession *cdb.Session, tc tclient.Client, scp *sc.ClientPool, cfg *config.Config) UpdateExpectedPowerShelfHandler {
+func NewUpdateExpectedPowerShelfHandler(dbSession *cdb.Session, scp *sc.ClientPool, cfg *config.Config) UpdateExpectedPowerShelfHandler {
 	return UpdateExpectedPowerShelfHandler{
 		dbSession:  dbSession,
-		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
 		tracerSpan: cutil.NewTracerSpan(),
@@ -823,17 +815,15 @@ func (uepsh UpdateExpectedPowerShelfHandler) Handle(c echo.Context) error {
 // DeleteExpectedPowerShelfHandler is the API Handler for deleting a ExpectedPowerShelf
 type DeleteExpectedPowerShelfHandler struct {
 	dbSession  *cdb.Session
-	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
 	tracerSpan *cutil.TracerSpan
 }
 
 // NewDeleteExpectedPowerShelfHandler initializes and returns a new handler for deleting ExpectedPowerShelf
-func NewDeleteExpectedPowerShelfHandler(dbSession *cdb.Session, tc tclient.Client, scp *sc.ClientPool, cfg *config.Config) DeleteExpectedPowerShelfHandler {
+func NewDeleteExpectedPowerShelfHandler(dbSession *cdb.Session, scp *sc.ClientPool, cfg *config.Config) DeleteExpectedPowerShelfHandler {
 	return DeleteExpectedPowerShelfHandler{
 		dbSession:  dbSession,
-		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
 		tracerSpan: cutil.NewTracerSpan(),

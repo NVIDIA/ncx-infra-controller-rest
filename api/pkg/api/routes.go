@@ -419,79 +419,79 @@ func NewAPIRoutes(dbSession *cdb.Session, tc tClient.Client, tnc tClient.Namespa
 		{
 			Path:    apiPathPrefix + "/expected-machine",
 			Method:  http.MethodPost,
-			Handler: apiHandler.NewCreateExpectedMachineHandler(dbSession, tc, scp, cfg),
+			Handler: apiHandler.NewCreateExpectedMachineHandler(dbSession, scp, cfg),
 		},
 		{
 			Path:    apiPathPrefix + "/expected-machine",
 			Method:  http.MethodGet,
-			Handler: apiHandler.NewGetAllExpectedMachineHandler(dbSession, tc, cfg),
+			Handler: apiHandler.NewGetAllExpectedMachineHandler(dbSession, cfg),
 		},
 		{
 			Path:    apiPathPrefix + "/expected-machine/:id",
 			Method:  http.MethodGet,
-			Handler: apiHandler.NewGetExpectedMachineHandler(dbSession, tc, cfg),
+			Handler: apiHandler.NewGetExpectedMachineHandler(dbSession, cfg),
 		},
 		{
 			Path:    apiPathPrefix + "/expected-machine/:id",
 			Method:  http.MethodPatch,
-			Handler: apiHandler.NewUpdateExpectedMachineHandler(dbSession, tc, scp, cfg),
+			Handler: apiHandler.NewUpdateExpectedMachineHandler(dbSession, scp, cfg),
 		},
 		{
 			Path:    apiPathPrefix + "/expected-machine/:id",
 			Method:  http.MethodDelete,
-			Handler: apiHandler.NewDeleteExpectedMachineHandler(dbSession, tc, scp, cfg),
+			Handler: apiHandler.NewDeleteExpectedMachineHandler(dbSession, scp, cfg),
 		},
 		// ExpectedPowerShelf endpoints
 		{
 			Path:    apiPathPrefix + "/expected-power-shelf",
 			Method:  http.MethodPost,
-			Handler: apiHandler.NewCreateExpectedPowerShelfHandler(dbSession, tc, scp, cfg),
+			Handler: apiHandler.NewCreateExpectedPowerShelfHandler(dbSession, scp, cfg),
 		},
 		{
 			Path:    apiPathPrefix + "/expected-power-shelf",
 			Method:  http.MethodGet,
-			Handler: apiHandler.NewGetAllExpectedPowerShelfHandler(dbSession, tc, cfg),
+			Handler: apiHandler.NewGetAllExpectedPowerShelfHandler(dbSession, cfg),
 		},
 		{
 			Path:    apiPathPrefix + "/expected-power-shelf/:id",
 			Method:  http.MethodGet,
-			Handler: apiHandler.NewGetExpectedPowerShelfHandler(dbSession, tc, cfg),
+			Handler: apiHandler.NewGetExpectedPowerShelfHandler(dbSession, cfg),
 		},
 		{
 			Path:    apiPathPrefix + "/expected-power-shelf/:id",
 			Method:  http.MethodPatch,
-			Handler: apiHandler.NewUpdateExpectedPowerShelfHandler(dbSession, tc, scp, cfg),
+			Handler: apiHandler.NewUpdateExpectedPowerShelfHandler(dbSession, scp, cfg),
 		},
 		{
 			Path:    apiPathPrefix + "/expected-power-shelf/:id",
 			Method:  http.MethodDelete,
-			Handler: apiHandler.NewDeleteExpectedPowerShelfHandler(dbSession, tc, scp, cfg),
+			Handler: apiHandler.NewDeleteExpectedPowerShelfHandler(dbSession, scp, cfg),
 		},
 		// ExpectedSwitch endpoints
 		{
 			Path:    apiPathPrefix + "/expected-switch",
 			Method:  http.MethodPost,
-			Handler: apiHandler.NewCreateExpectedSwitchHandler(dbSession, tc, scp, cfg),
+			Handler: apiHandler.NewCreateExpectedSwitchHandler(dbSession, scp, cfg),
 		},
 		{
 			Path:    apiPathPrefix + "/expected-switch",
 			Method:  http.MethodGet,
-			Handler: apiHandler.NewGetAllExpectedSwitchHandler(dbSession, tc, cfg),
+			Handler: apiHandler.NewGetAllExpectedSwitchHandler(dbSession, cfg),
 		},
 		{
 			Path:    apiPathPrefix + "/expected-switch/:id",
 			Method:  http.MethodGet,
-			Handler: apiHandler.NewGetExpectedSwitchHandler(dbSession, tc, cfg),
+			Handler: apiHandler.NewGetExpectedSwitchHandler(dbSession, cfg),
 		},
 		{
 			Path:    apiPathPrefix + "/expected-switch/:id",
 			Method:  http.MethodPatch,
-			Handler: apiHandler.NewUpdateExpectedSwitchHandler(dbSession, tc, scp, cfg),
+			Handler: apiHandler.NewUpdateExpectedSwitchHandler(dbSession, scp, cfg),
 		},
 		{
 			Path:    apiPathPrefix + "/expected-switch/:id",
 			Method:  http.MethodDelete,
-			Handler: apiHandler.NewDeleteExpectedSwitchHandler(dbSession, tc, scp, cfg),
+			Handler: apiHandler.NewDeleteExpectedSwitchHandler(dbSession, scp, cfg),
 		},
 		// Machine endpoints
 		{

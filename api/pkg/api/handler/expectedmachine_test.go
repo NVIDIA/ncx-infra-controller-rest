@@ -184,7 +184,7 @@ func TestCreateExpectedMachineHandler_Handle(t *testing.T) {
 	mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, "CreateExpectedMachine", mock.Anything).Return(mockWorkflowRun, nil)
 	scp.IDClientMap[site.ID.String()] = mockTemporalClient
 
-	handler := NewCreateExpectedMachineHandler(dbSession, nil, scp, cfg)
+	handler := NewCreateExpectedMachineHandler(dbSession, scp, cfg)
 
 	// Helper function to create mock user
 	createMockUser := func(org string) *cdbm.User {
@@ -419,7 +419,7 @@ func TestGetAllExpectedMachineHandler_Handle(t *testing.T) {
 
 	ctx := context.Background()
 	cfg := &config.Config{}
-	handler := NewGetAllExpectedMachineHandler(dbSession, nil, cfg)
+	handler := NewGetAllExpectedMachineHandler(dbSession, cfg)
 
 	org := "test-org"
 	infraProv, site := testExpectedMachineSetupTestData(t, dbSession, org)
@@ -707,7 +707,7 @@ func TestGetExpectedMachineHandler_Handle(t *testing.T) {
 	ctx := context.Background()
 
 	cfg := &config.Config{}
-	handler := NewGetExpectedMachineHandler(dbSession, nil, cfg)
+	handler := NewGetExpectedMachineHandler(dbSession, cfg)
 
 	org := "test-org"
 	infraProv, site := testExpectedMachineSetupTestData(t, dbSession, org)
@@ -986,7 +986,7 @@ func TestUpdateExpectedMachineHandler_Handle(t *testing.T) {
 	mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, "UpdateExpectedMachine", mock.Anything).Return(mockWorkflowRun, nil)
 	scp.IDClientMap[site.ID.String()] = mockTemporalClient
 
-	handler := NewUpdateExpectedMachineHandler(dbSession, nil, scp, cfg)
+	handler := NewUpdateExpectedMachineHandler(dbSession, scp, cfg)
 
 	// Helper function to create mock user
 	createMockUser := func(org string) *cdbm.User {
@@ -1188,7 +1188,7 @@ func TestDeleteExpectedMachineHandler_Handle(t *testing.T) {
 	mockTemporalClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.Anything, "DeleteExpectedMachine", mock.Anything).Return(mockWorkflowRun, nil)
 	scp.IDClientMap[site.ID.String()] = mockTemporalClient
 
-	handler := NewDeleteExpectedMachineHandler(dbSession, nil, scp, cfg)
+	handler := NewDeleteExpectedMachineHandler(dbSession, scp, cfg)
 
 	// Helper function to create mock user
 	createMockUser := func(org string) *cdbm.User {
@@ -1436,7 +1436,7 @@ func TestTenantWithTargetedInstanceCreationCapability(t *testing.T) {
 				Labels:                   map[string]string{"tenant": "test"},
 			},
 			setupHandler: func() interface{} {
-				return NewCreateExpectedMachineHandler(dbSession, tc, scp, cfg)
+				return NewCreateExpectedMachineHandler(dbSession, scp, cfg)
 			},
 			setupContext: func(c echo.Context) {
 				c.Set("user", tenantUser)
@@ -1458,7 +1458,7 @@ func TestTenantWithTargetedInstanceCreationCapability(t *testing.T) {
 			path:        "/v2/org/" + tenantOrg + "/carbide/expected-machine?siteId=" + site.ID.String(),
 			requestBody: nil,
 			setupHandler: func() interface{} {
-				return NewGetAllExpectedMachineHandler(dbSession, tc, cfg)
+				return NewGetAllExpectedMachineHandler(dbSession, cfg)
 			},
 			setupContext: func(c echo.Context) {
 				c.Set("user", tenantUser)
@@ -1479,7 +1479,7 @@ func TestTenantWithTargetedInstanceCreationCapability(t *testing.T) {
 			path:        "/v2/org/" + tenantOrg + "/carbide/expected-machine",
 			requestBody: nil,
 			setupHandler: func() interface{} {
-				return NewGetAllExpectedMachineHandler(dbSession, tc, cfg)
+				return NewGetAllExpectedMachineHandler(dbSession, cfg)
 			},
 			setupContext: func(c echo.Context) {
 				c.Set("user", tenantUser)
@@ -1501,7 +1501,7 @@ func TestTenantWithTargetedInstanceCreationCapability(t *testing.T) {
 				ChassisSerialNumber: "NO-CAP-CHASSIS",
 			},
 			setupHandler: func() interface{} {
-				return NewCreateExpectedMachineHandler(dbSession, tc, scp, cfg)
+				return NewCreateExpectedMachineHandler(dbSession, scp, cfg)
 			},
 			setupContext: func(c echo.Context) {
 				c.Set("user", tenantUser2)
@@ -1523,7 +1523,7 @@ func TestTenantWithTargetedInstanceCreationCapability(t *testing.T) {
 				ChassisSerialNumber: "NO-ACCOUNT-CHASSIS",
 			},
 			setupHandler: func() interface{} {
-				return NewCreateExpectedMachineHandler(dbSession, tc, scp, cfg)
+				return NewCreateExpectedMachineHandler(dbSession, scp, cfg)
 			},
 			setupContext: func(c echo.Context) {
 				c.Set("user", tenantUser)
@@ -1659,7 +1659,7 @@ func TestCreateExpectedMachinesHandler_Handle(t *testing.T) {
 
 	scp.IDClientMap[site.ID.String()] = mockTemporalClient
 
-	handler := NewCreateExpectedMachinesHandler(dbSession, nil, scp, cfg)
+	handler := NewCreateExpectedMachinesHandler(dbSession, scp, cfg)
 
 	// Helper function to create mock user
 	createMockUser := func(org string) *cdbm.User {
@@ -1877,7 +1877,7 @@ func TestCreateExpectedMachineHandler_BmcCredentialsForwardedToWorkflow(t *testi
 		Return(mockWorkflowRun, nil)
 	scp.IDClientMap[site.ID.String()] = mockTemporalClient
 
-	handler := NewCreateExpectedMachineHandler(dbSession, nil, scp, cfg)
+	handler := NewCreateExpectedMachineHandler(dbSession, scp, cfg)
 
 	// Build the request body as a raw JSON map using the field names defined in the
 	// OpenAPI spec ("defaultBmcUsername" / "defaultBmcPassword"), exactly as a curl
@@ -1973,7 +1973,7 @@ func TestUpdateExpectedMachineHandler_BmcCredentialsForwardedToWorkflow(t *testi
 		Return(mockWorkflowRun, nil)
 	scp.IDClientMap[site.ID.String()] = mockTemporalClient
 
-	handler := NewUpdateExpectedMachineHandler(dbSession, nil, scp, cfg)
+	handler := NewUpdateExpectedMachineHandler(dbSession, scp, cfg)
 
 	// Build the request body as a raw JSON map using the field names defined in the
 	// OpenAPI spec ("defaultBmcUsername" / "defaultBmcPassword"), exactly as a curl
@@ -2143,7 +2143,7 @@ func TestUpdateExpectedMachinesHandler_Handle(t *testing.T) {
 
 	scp.IDClientMap[site.ID.String()] = mockTemporalClient
 
-	handler := NewUpdateExpectedMachinesHandler(dbSession, nil, scp, cfg)
+	handler := NewUpdateExpectedMachinesHandler(dbSession, scp, cfg)
 
 	// Helper function to create mock user
 	createMockUser := func(org string) *cdbm.User {

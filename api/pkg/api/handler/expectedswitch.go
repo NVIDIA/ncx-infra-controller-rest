@@ -49,17 +49,15 @@ import (
 // CreateExpectedSwitchHandler is the API Handler for creating new ExpectedSwitch
 type CreateExpectedSwitchHandler struct {
 	dbSession  *cdb.Session
-	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
 	tracerSpan *cutil.TracerSpan
 }
 
 // NewCreateExpectedSwitchHandler initializes and returns a new handler for creating ExpectedSwitch
-func NewCreateExpectedSwitchHandler(dbSession *cdb.Session, tc tclient.Client, scp *sc.ClientPool, cfg *config.Config) CreateExpectedSwitchHandler {
+func NewCreateExpectedSwitchHandler(dbSession *cdb.Session, scp *sc.ClientPool, cfg *config.Config) CreateExpectedSwitchHandler {
 	return CreateExpectedSwitchHandler{
 		dbSession:  dbSession,
-		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
 		tracerSpan: cutil.NewTracerSpan(),
@@ -307,16 +305,14 @@ func (cesh CreateExpectedSwitchHandler) Handle(c echo.Context) error {
 // GetAllExpectedSwitchHandler is the API Handler for getting all ExpectedSwitches
 type GetAllExpectedSwitchHandler struct {
 	dbSession  *cdb.Session
-	tc         tclient.Client
 	cfg        *config.Config
 	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllExpectedSwitchHandler initializes and returns a new handler for getting all ExpectedSwitches
-func NewGetAllExpectedSwitchHandler(dbSession *cdb.Session, tc tclient.Client, cfg *config.Config) GetAllExpectedSwitchHandler {
+func NewGetAllExpectedSwitchHandler(dbSession *cdb.Session, cfg *config.Config) GetAllExpectedSwitchHandler {
 	return GetAllExpectedSwitchHandler{
 		dbSession:  dbSession,
-		tc:         tc,
 		cfg:        cfg,
 		tracerSpan: cutil.NewTracerSpan(),
 	}
@@ -469,16 +465,14 @@ func (gaesh GetAllExpectedSwitchHandler) Handle(c echo.Context) error {
 // GetExpectedSwitchHandler is the API Handler for retrieving ExpectedSwitch
 type GetExpectedSwitchHandler struct {
 	dbSession  *cdb.Session
-	tc         tclient.Client
 	cfg        *config.Config
 	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetExpectedSwitchHandler initializes and returns a new handler to retrieve ExpectedSwitch
-func NewGetExpectedSwitchHandler(dbSession *cdb.Session, tc tclient.Client, cfg *config.Config) GetExpectedSwitchHandler {
+func NewGetExpectedSwitchHandler(dbSession *cdb.Session, cfg *config.Config) GetExpectedSwitchHandler {
 	return GetExpectedSwitchHandler{
 		dbSession:  dbSession,
-		tc:         tc,
 		cfg:        cfg,
 		tracerSpan: cutil.NewTracerSpan(),
 	}
@@ -573,17 +567,15 @@ func (gesh GetExpectedSwitchHandler) Handle(c echo.Context) error {
 // UpdateExpectedSwitchHandler is the API Handler for updating a ExpectedSwitch
 type UpdateExpectedSwitchHandler struct {
 	dbSession  *cdb.Session
-	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
 	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateExpectedSwitchHandler initializes and returns a new handler for updating ExpectedSwitch
-func NewUpdateExpectedSwitchHandler(dbSession *cdb.Session, tc tclient.Client, scp *sc.ClientPool, cfg *config.Config) UpdateExpectedSwitchHandler {
+func NewUpdateExpectedSwitchHandler(dbSession *cdb.Session, scp *sc.ClientPool, cfg *config.Config) UpdateExpectedSwitchHandler {
 	return UpdateExpectedSwitchHandler{
 		dbSession:  dbSession,
-		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
 		tracerSpan: cutil.NewTracerSpan(),
@@ -829,17 +821,15 @@ func (uesh UpdateExpectedSwitchHandler) Handle(c echo.Context) error {
 // DeleteExpectedSwitchHandler is the API Handler for deleting a ExpectedSwitch
 type DeleteExpectedSwitchHandler struct {
 	dbSession  *cdb.Session
-	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
 	tracerSpan *cutil.TracerSpan
 }
 
 // NewDeleteExpectedSwitchHandler initializes and returns a new handler for deleting ExpectedSwitch
-func NewDeleteExpectedSwitchHandler(dbSession *cdb.Session, tc tclient.Client, scp *sc.ClientPool, cfg *config.Config) DeleteExpectedSwitchHandler {
+func NewDeleteExpectedSwitchHandler(dbSession *cdb.Session, scp *sc.ClientPool, cfg *config.Config) DeleteExpectedSwitchHandler {
 	return DeleteExpectedSwitchHandler{
 		dbSession:  dbSession,
-		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
 		tracerSpan: cutil.NewTracerSpan(),

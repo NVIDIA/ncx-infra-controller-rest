@@ -98,17 +98,15 @@ func ValidateProviderOrTenantSiteAccess(ctx context.Context, logger zerolog.Logg
 // CreateExpectedMachineHandler is the API Handler for creating new ExpectedMachine
 type CreateExpectedMachineHandler struct {
 	dbSession  *cdb.Session
-	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
 	tracerSpan *cutil.TracerSpan
 }
 
 // NewCreateExpectedMachineHandler initializes and returns a new handler for creating ExpectedMachine
-func NewCreateExpectedMachineHandler(dbSession *cdb.Session, tc tclient.Client, scp *sc.ClientPool, cfg *config.Config) CreateExpectedMachineHandler {
+func NewCreateExpectedMachineHandler(dbSession *cdb.Session, scp *sc.ClientPool, cfg *config.Config) CreateExpectedMachineHandler {
 	return CreateExpectedMachineHandler{
 		dbSession:  dbSession,
-		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
 		tracerSpan: cutil.NewTracerSpan(),
@@ -366,16 +364,14 @@ func (cemh CreateExpectedMachineHandler) Handle(c echo.Context) error {
 // GetAllExpectedMachineHandler is the API Handler for getting all ExpectedMachines
 type GetAllExpectedMachineHandler struct {
 	dbSession  *cdb.Session
-	tc         tclient.Client
 	cfg        *config.Config
 	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetAllExpectedMachineHandler initializes and returns a new handler for getting all ExpectedMachines
-func NewGetAllExpectedMachineHandler(dbSession *cdb.Session, tc tclient.Client, cfg *config.Config) GetAllExpectedMachineHandler {
+func NewGetAllExpectedMachineHandler(dbSession *cdb.Session, cfg *config.Config) GetAllExpectedMachineHandler {
 	return GetAllExpectedMachineHandler{
 		dbSession:  dbSession,
-		tc:         tc,
 		cfg:        cfg,
 		tracerSpan: cutil.NewTracerSpan(),
 	}
@@ -528,16 +524,14 @@ func (gaemh GetAllExpectedMachineHandler) Handle(c echo.Context) error {
 // GetExpectedMachineHandler is the API Handler for retrieving ExpectedMachine
 type GetExpectedMachineHandler struct {
 	dbSession  *cdb.Session
-	tc         tclient.Client
 	cfg        *config.Config
 	tracerSpan *cutil.TracerSpan
 }
 
 // NewGetExpectedMachineHandler initializes and returns a new handler to retrieve ExpectedMachine
-func NewGetExpectedMachineHandler(dbSession *cdb.Session, tc tclient.Client, cfg *config.Config) GetExpectedMachineHandler {
+func NewGetExpectedMachineHandler(dbSession *cdb.Session, cfg *config.Config) GetExpectedMachineHandler {
 	return GetExpectedMachineHandler{
 		dbSession:  dbSession,
-		tc:         tc,
 		cfg:        cfg,
 		tracerSpan: cutil.NewTracerSpan(),
 	}
@@ -632,17 +626,15 @@ func (gemh GetExpectedMachineHandler) Handle(c echo.Context) error {
 // UpdateExpectedMachineHandler is the API Handler for updating a ExpectedMachine
 type UpdateExpectedMachineHandler struct {
 	dbSession  *cdb.Session
-	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
 	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateExpectedMachineHandler initializes and returns a new handler for updating ExpectedMachine
-func NewUpdateExpectedMachineHandler(dbSession *cdb.Session, tc tclient.Client, scp *sc.ClientPool, cfg *config.Config) UpdateExpectedMachineHandler {
+func NewUpdateExpectedMachineHandler(dbSession *cdb.Session, scp *sc.ClientPool, cfg *config.Config) UpdateExpectedMachineHandler {
 	return UpdateExpectedMachineHandler{
 		dbSession:  dbSession,
-		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
 		tracerSpan: cutil.NewTracerSpan(),
@@ -898,17 +890,15 @@ func (uemh UpdateExpectedMachineHandler) Handle(c echo.Context) error {
 // DeleteExpectedMachineHandler is the API Handler for deleting a ExpectedMachine
 type DeleteExpectedMachineHandler struct {
 	dbSession  *cdb.Session
-	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
 	tracerSpan *cutil.TracerSpan
 }
 
 // NewDeleteExpectedMachineHandler initializes and returns a new handler for deleting ExpectedMachine
-func NewDeleteExpectedMachineHandler(dbSession *cdb.Session, tc tclient.Client, scp *sc.ClientPool, cfg *config.Config) DeleteExpectedMachineHandler {
+func NewDeleteExpectedMachineHandler(dbSession *cdb.Session, scp *sc.ClientPool, cfg *config.Config) DeleteExpectedMachineHandler {
 	return DeleteExpectedMachineHandler{
 		dbSession:  dbSession,
-		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
 		tracerSpan: cutil.NewTracerSpan(),
@@ -1043,17 +1033,15 @@ func (demh DeleteExpectedMachineHandler) Handle(c echo.Context) error {
 // CreateExpectedMachinesHandler is the API Handler for creating multiple ExpectedMachines
 type CreateExpectedMachinesHandler struct {
 	dbSession  *cdb.Session
-	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
 	tracerSpan *cutil.TracerSpan
 }
 
 // NewCreateExpectedMachinesHandler initializes and returns a new handler for creating multiple ExpectedMachines
-func NewCreateExpectedMachinesHandler(dbSession *cdb.Session, tc tclient.Client, scp *sc.ClientPool, cfg *config.Config) CreateExpectedMachinesHandler {
+func NewCreateExpectedMachinesHandler(dbSession *cdb.Session, scp *sc.ClientPool, cfg *config.Config) CreateExpectedMachinesHandler {
 	return CreateExpectedMachinesHandler{
 		dbSession:  dbSession,
-		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
 		tracerSpan: cutil.NewTracerSpan(),
@@ -1427,17 +1415,15 @@ func (cemh CreateExpectedMachinesHandler) Handle(c echo.Context) error {
 // UpdateExpectedMachinesHandler is the API Handler for batch updating ExpectedMachines
 type UpdateExpectedMachinesHandler struct {
 	dbSession  *cdb.Session
-	tc         tclient.Client
 	scp        *sc.ClientPool
 	cfg        *config.Config
 	tracerSpan *cutil.TracerSpan
 }
 
 // NewUpdateExpectedMachinesHandler initializes and returns a new handler for batch updating ExpectedMachines
-func NewUpdateExpectedMachinesHandler(dbSession *cdb.Session, tc tclient.Client, scp *sc.ClientPool, cfg *config.Config) UpdateExpectedMachinesHandler {
+func NewUpdateExpectedMachinesHandler(dbSession *cdb.Session, scp *sc.ClientPool, cfg *config.Config) UpdateExpectedMachinesHandler {
 	return UpdateExpectedMachinesHandler{
 		dbSession:  dbSession,
-		tc:         tc,
 		scp:        scp,
 		cfg:        cfg,
 		tracerSpan: cutil.NewTracerSpan(),
