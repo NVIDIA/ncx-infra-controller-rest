@@ -416,10 +416,11 @@ func (ssd SubnetSQLDAO) GetAll(ctx context.Context, tx *db.Tx, filter SubnetFilt
 		query = query.Where("su.status IN (?)", bun.In(filter.Statuses))
 		ssd.tracerSpan.SetAttribute(sbDAOSpan, "status", filter.Statuses)
 	}
-	if searchQuery, normalizedTokens, ok := normalizeSearchQuery(filter.SearchQuery); ok {
+	searchQuery, searchTokens, ok := db.NormalizeSearchQuery(filter.SearchQuery)
+	if ok {
 		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
-				Where("to_tsvector('english', (coalesce(su.name, ' ') || ' ' || coalesce(su.description, ' ') || ' ' || coalesce(su.status, ' '))) @@ to_tsquery('english', ?)", *normalizedTokens).
+				Where("to_tsvector('english', (coalesce(su.name, ' ') || ' ' || coalesce(su.description, ' ') || ' ' || coalesce(su.status, ' '))) @@ to_tsquery('english', ?)", *searchTokens).
 				WhereOr("su.name ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("su.description ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("su.status ILIKE ?", "%"+searchQuery+"%")

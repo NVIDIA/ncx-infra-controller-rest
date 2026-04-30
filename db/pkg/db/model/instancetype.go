@@ -374,10 +374,11 @@ func (itsd InstanceTypeSQLDAO) GetAll(ctx context.Context, tx *db.Tx, filter Ins
 		query = query.Distinct()
 	}
 
-	if searchQuery, normalizedTokens, ok := normalizeSearchQuery(filter.SearchQuery); ok {
+	searchQuery, searchTokens, ok := db.NormalizeSearchQuery(filter.SearchQuery)
+	if ok {
 		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
-				Where("to_tsvector('english', (coalesce(it.name, ' ') || ' ' || coalesce(it.display_name, ' ') || ' ' || coalesce(it.description, ' ') || ' ' || coalesce(it.labels::text, ' ') || ' ' || coalesce(it.status, ' '))) @@ to_tsquery('english', ?)", *normalizedTokens).
+				Where("to_tsvector('english', (coalesce(it.name, ' ') || ' ' || coalesce(it.display_name, ' ') || ' ' || coalesce(it.description, ' ') || ' ' || coalesce(it.labels::text, ' ') || ' ' || coalesce(it.status, ' '))) @@ to_tsquery('english', ?)", *searchTokens).
 				WhereOr("it.name ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("it.display_name ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("it.description ILIKE ?", "%"+searchQuery+"%").

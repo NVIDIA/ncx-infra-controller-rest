@@ -291,10 +291,11 @@ func (ibisd InfiniBandInterfaceSQLDAO) GetAll(ctx context.Context, tx *db.Tx, fi
 		ibisd.tracerSpan.SetAttribute(InfiniBandInterfaceDAOSpan, "ids", filter.InfiniBandInterfaceIDs)
 	}
 
-	if searchQuery, normalizedTokens, ok := normalizeSearchQuery(filter.SearchQuery); ok {
+	searchQuery, searchTokens, ok := db.NormalizeSearchQuery(filter.SearchQuery)
+	if ok {
 		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
-				Where("to_tsvector('english', (coalesce(ibi.device, ' ') || ' ' || coalesce(ibi.vendor, ' ') || ' ' || coalesce(ibi.physical_guid, ' ') || ' ' || coalesce(ibi.guid, ' ') || ' ' || coalesce(ibi.status, ' '))) @@ to_tsquery('english', ?)", *normalizedTokens).
+				Where("to_tsvector('english', (coalesce(ibi.device, ' ') || ' ' || coalesce(ibi.vendor, ' ') || ' ' || coalesce(ibi.physical_guid, ' ') || ' ' || coalesce(ibi.guid, ' ') || ' ' || coalesce(ibi.status, ' '))) @@ to_tsquery('english', ?)", *searchTokens).
 				WhereOr("ibi.device ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("ibi.vendor ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("ibi.physical_guid ILIKE ?", "%"+searchQuery+"%").

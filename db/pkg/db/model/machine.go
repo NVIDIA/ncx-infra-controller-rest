@@ -621,10 +621,11 @@ func (msd MachineSQLDAO) setQueryWithFilter(filter MachineFilterInput, query *bu
 		}
 	}
 
-	if searchQuery, normalizedTokens, ok := normalizeSearchQuery(filter.SearchQuery); ok {
+	searchQuery, searchTokens, ok := db.NormalizeSearchQuery(filter.SearchQuery)
+	if ok {
 		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
-				Where("to_tsvector('english', (coalesce(m.id, ' ') || ' ' || coalesce(m.vendor, ' ') || ' ' || coalesce(m.product_name, ' ') || ' ' || coalesce(m.hostname, ' ') || ' ' || coalesce(m.status, ' ') || ' ' || coalesce(m.labels::text, ' '))) @@ to_tsquery('english', ?)", *normalizedTokens).
+				Where("to_tsvector('english', (coalesce(m.id, ' ') || ' ' || coalesce(m.vendor, ' ') || ' ' || coalesce(m.product_name, ' ') || ' ' || coalesce(m.hostname, ' ') || ' ' || coalesce(m.status, ' ') || ' ' || coalesce(m.labels::text, ' '))) @@ to_tsquery('english', ?)", *searchTokens).
 				WhereOr("m.id ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("m.vendor ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("m.product_name ILIKE ?", "%"+searchQuery+"%").

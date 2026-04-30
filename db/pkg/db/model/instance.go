@@ -550,10 +550,11 @@ func (isd InstanceSQLDAO) setQueryWithFilter(filter InstanceFilterInput, query *
 		}
 	}
 
-	if searchQuery, normalizedTokens, ok := normalizeSearchQuery(filter.SearchQuery); ok {
+	searchQuery, searchTokens, ok := db.NormalizeSearchQuery(filter.SearchQuery)
+	if ok {
 		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
-				Where("to_tsvector('english', (coalesce(i.name, ' ') || ' ' || coalesce(i.status, ' ') || ' ' || coalesce(i.labels::text, ' '))) @@ to_tsquery('english', ?)", *normalizedTokens).
+				Where("to_tsvector('english', (coalesce(i.name, ' ') || ' ' || coalesce(i.status, ' ') || ' ' || coalesce(i.labels::text, ' '))) @@ to_tsquery('english', ?)", *searchTokens).
 				WhereOr("i.name ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("i.status ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("i.description ILIKE ?", "%"+searchQuery+"%").

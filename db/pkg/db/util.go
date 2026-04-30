@@ -82,7 +82,7 @@ func GetStringToUint64Hash(id string) uint64 {
 
 // GetStringToTsQuery returns a string into a to_tsquery format from the input string
 func GetStringToTsQuery(inputQuery string) string {
-	inputQuery, ok := NormalizeSearchQuery(inputQuery)
+	inputQuery, ok := TrimSearchQuery(inputQuery)
 	if !ok {
 		return ""
 	}
@@ -131,10 +131,29 @@ func GetStringToTsQuery(inputQuery string) string {
 	return strings.Join(tokens, " ")
 }
 
-// NormalizeSearchQuery trims a search query and reports whether it is non-blank.
-func NormalizeSearchQuery(input string) (string, bool) {
-	normalized := strings.TrimSpace(input)
-	return normalized, normalized != ""
+// normalizeSearchQuery normalizes a search query by trimming it and converting it to a to_tsquery format
+func NormalizeSearchQuery(input *string) (string, *string, bool) {
+	if input == nil {
+		return "", nil, false
+	}
+
+	searchQuery, ok := TrimSearchQuery(*input)
+	if !ok {
+		return "", nil, false
+	}
+
+	tsQuery := GetStringToTsQuery(searchQuery)
+	if tsQuery == "" {
+		return "", nil, false
+	}
+
+	return searchQuery, GetStrPtr(tsQuery), true
+}
+
+// TrimmedSearchQuery trims a search query and reports whether it is non-blank
+func TrimSearchQuery(input string) (string, bool) {
+	trimmed := strings.TrimSpace(input)
+	return trimmed, trimmed != ""
 }
 
 // CompareStringSlicesIgnoreOrder compares two string slices ignoring order

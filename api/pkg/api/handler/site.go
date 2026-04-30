@@ -748,7 +748,8 @@ func (gash GetAllSiteHandler) Handle(c echo.Context) error {
 
 	filter := cdbm.SiteFilterInput{}
 
-	if searchQuery := common.GetSearchQuery(c); searchQuery != nil {
+	searchQuery := common.GetSearchQuery(c)
+	if searchQuery != nil {
 		gash.tracerSpan.SetAttribute(handlerSpan, attribute.String("query", *searchQuery), logger)
 		filter.SearchQuery = searchQuery
 	}

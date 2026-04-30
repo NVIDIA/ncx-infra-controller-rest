@@ -32,7 +32,9 @@ type QueryOverride struct {
 
 // GetSearchQuery returns a trimmed search query or nil when the query is blank.
 func GetSearchQuery(c echo.Context) *string {
-	searchQuery, ok := cdb.NormalizeSearchQuery(c.QueryParams().Get("query"))
+	rawQuery := c.QueryParams().Get("query")
+
+	searchQuery, ok := cdb.TrimSearchQuery(rawQuery)
 	if !ok {
 		return nil
 	}

@@ -407,10 +407,11 @@ func (dessd DpuExtensionServiceSQLDAO) GetAll(ctx context.Context, tx *db.Tx, fi
 		}
 	}
 
-	if searchQuery, normalizedTokens, ok := normalizeSearchQuery(filter.SearchQuery); ok {
+	searchQuery, searchTokens, ok := db.NormalizeSearchQuery(filter.SearchQuery)
+	if ok {
 		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
-				Where("to_tsvector('english', (coalesce(des.name, ' ') || ' ' || coalesce(des.description, ' ') || ' ' || coalesce(des.status, ' '))) @@ to_tsquery('english', ?)", *normalizedTokens).
+				Where("to_tsvector('english', (coalesce(des.name, ' ') || ' ' || coalesce(des.description, ' ') || ' ' || coalesce(des.status, ' '))) @@ to_tsquery('english', ?)", *searchTokens).
 				WhereOr("des.name ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("des.description ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("des.status ILIKE ?", "%"+searchQuery+"%")

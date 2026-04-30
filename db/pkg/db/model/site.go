@@ -300,11 +300,12 @@ func (ssd SiteSQLDAO) setQueryWithFilter(filter SiteFilterInput, query *bun.Sele
 		ssd.tracerSpan.SetAttribute(siteDAOSpan, "status", filter.Statuses)
 	}
 
-	if searchQuery, normalizedTokens, ok := normalizeSearchQuery(filter.SearchQuery); ok {
+	searchQuery, searchTokens, ok := db.NormalizeSearchQuery(filter.SearchQuery)
+	if ok {
 		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
 				Where("to_tsvector('english', (coalesce(st.name, ' ') || ' ' || coalesce(st.description, ' ') || ' ' || "+
-					"coalesce(st.status, ' ') || ' ' || coalesce(st.location::text, ' ') || ' ' || coalesce(st.contact::text, ' '))) @@ to_tsquery('english', ?)", *normalizedTokens).
+					"coalesce(st.status, ' ') || ' ' || coalesce(st.location::text, ' ') || ' ' || coalesce(st.contact::text, ' '))) @@ to_tsquery('english', ?)", *searchTokens).
 				WhereOr("st.name ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("st.description ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("st.status ILIKE ?", "%"+searchQuery+"%").

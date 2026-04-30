@@ -297,10 +297,11 @@ func (essd ExpectedSwitchSQLDAO) setQueryWithFilter(filter ExpectedSwitchFilterI
 		}
 	}
 
-	if searchQuery, normalizedTokens, ok := normalizeSearchQuery(filter.SearchQuery); ok {
+	searchQuery, searchTokens, ok := db.NormalizeSearchQuery(filter.SearchQuery)
+	if ok {
 		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
-				Where("to_tsvector('english', (coalesce(es.bmc_mac_address, ' ') || ' ' || coalesce(es.switch_serial_number, ' ') || ' ' || coalesce(es.labels::text, ' '))) @@ to_tsquery('english', ?)", *normalizedTokens).
+				Where("to_tsvector('english', (coalesce(es.bmc_mac_address, ' ') || ' ' || coalesce(es.switch_serial_number, ' ') || ' ' || coalesce(es.labels::text, ' '))) @@ to_tsquery('english', ?)", *searchTokens).
 				WhereOr("es.bmc_mac_address ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("es.switch_serial_number ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("es.labels::text ILIKE ?", "%"+searchQuery+"%").

@@ -369,10 +369,11 @@ func (asd AllocationSQLDAO) setQueryWithFilter(filter AllocationFilterInput, que
 		asd.tracerSpan.SetAttribute(allocationDAOSpan, "id", filter.AllocationIDs)
 	}
 
-	if searchQuery, normalizedTokens, ok := normalizeSearchQuery(filter.SearchQuery); ok {
+	searchQuery, searchTokens, ok := db.NormalizeSearchQuery(filter.SearchQuery)
+	if ok {
 		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
-				Where("to_tsvector('english', (coalesce(a.name, ' ') || ' ' || coalesce(a.description, ' ') || ' ' || coalesce(a.status, ' '))) @@ to_tsquery('english', ?)", *normalizedTokens).
+				Where("to_tsvector('english', (coalesce(a.name, ' ') || ' ' || coalesce(a.description, ' ') || ' ' || coalesce(a.status, ' '))) @@ to_tsquery('english', ?)", *searchTokens).
 				WhereOr("a.name ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("a.description ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("a.status ILIKE ?", "%"+searchQuery+"%")

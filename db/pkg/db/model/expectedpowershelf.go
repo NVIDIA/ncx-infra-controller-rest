@@ -302,10 +302,11 @@ func (epsd ExpectedPowerShelfSQLDAO) setQueryWithFilter(filter ExpectedPowerShel
 		}
 	}
 
-	if searchQuery, normalizedTokens, ok := normalizeSearchQuery(filter.SearchQuery); ok {
+	searchQuery, searchTokens, ok := db.NormalizeSearchQuery(filter.SearchQuery)
+	if ok {
 		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
-				Where("to_tsvector('english', (coalesce(eps.bmc_mac_address, ' ') || ' ' || coalesce(eps.shelf_serial_number, ' ') || ' ' || coalesce(eps.ip_address, ' ') || ' ' || coalesce(eps.labels::text, ' '))) @@ to_tsquery('english', ?)", *normalizedTokens).
+				Where("to_tsvector('english', (coalesce(eps.bmc_mac_address, ' ') || ' ' || coalesce(eps.shelf_serial_number, ' ') || ' ' || coalesce(eps.ip_address, ' ') || ' ' || coalesce(eps.labels::text, ' '))) @@ to_tsquery('english', ?)", *searchTokens).
 				WhereOr("eps.bmc_mac_address ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("eps.shelf_serial_number ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("eps.ip_address ILIKE ?", "%"+searchQuery+"%").

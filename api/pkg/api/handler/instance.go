@@ -3957,7 +3957,8 @@ func (gaih GetAllInstanceHandler) Handle(c echo.Context) error {
 	filter.SiteIDs = siteIDs
 
 	// Get query text for full text search from query param
-	if searchQuery := common.GetSearchQuery(c); searchQuery != nil {
+	searchQuery := common.GetSearchQuery(c)
+	if searchQuery != nil {
 		filter.SearchQuery = searchQuery
 		gaih.tracerSpan.SetAttribute(handlerSpan, attribute.String("query", *searchQuery), logger)
 	}

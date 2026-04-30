@@ -400,10 +400,11 @@ func (sgsd NetworkSecurityGroupSQLDAO) GetAll(ctx context.Context, tx *db.Tx, fi
 		sgsd.tracerSpan.SetAttribute(networkSecurityGroupDAOSpan, "tenant_organization_ids", filter.Statuses)
 	}
 
-	if searchQuery, normalizedTokens, ok := normalizeSearchQuery(filter.SearchQuery); ok {
+	searchQuery, searchTokens, ok := db.NormalizeSearchQuery(filter.SearchQuery)
+	if ok {
 		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
-				Where("to_tsvector('english', (coalesce(nsg.name, ' ') || ' ' || coalesce(nsg.status, ' ') || ' ' || coalesce(nsg.labels::text, ' '))) @@ to_tsquery('english', ?)", *normalizedTokens).
+				Where("to_tsvector('english', (coalesce(nsg.name, ' ') || ' ' || coalesce(nsg.status, ' ') || ' ' || coalesce(nsg.labels::text, ' '))) @@ to_tsquery('english', ?)", *searchTokens).
 				WhereOr("nsg.name ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("nsg.status ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("nsg.description ILIKE ?", "%"+searchQuery+"%").

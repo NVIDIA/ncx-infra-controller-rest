@@ -242,10 +242,12 @@ func (fbsd FabricSQLDAO) GetAll(ctx context.Context, tx *db.Tx, org *string, sit
 			query = query.Where("fb.id IN (?)", bun.In(ids))
 		}
 	}
-	if normalizedSearchQuery, normalizedTokens, ok := normalizeSearchQuery(searchQuery); ok {
+
+	normalizedSearchQuery, searchTokens, ok := db.NormalizeSearchQuery(searchQuery)
+	if ok {
 		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
-				Where("to_tsvector('english', (coalesce(fb.id, ' ') || ' ' || coalesce(fb.status, ' '))) @@ to_tsquery('english', ?)", *normalizedTokens).
+				Where("to_tsvector('english', (coalesce(fb.id, ' ') || ' ' || coalesce(fb.status, ' '))) @@ to_tsquery('english', ?)", *searchTokens).
 				WhereOr("fb.id ILIKE ?", "%"+normalizedSearchQuery+"%").
 				WhereOr("fb.status ILIKE ?", "%"+normalizedSearchQuery+"%")
 		})

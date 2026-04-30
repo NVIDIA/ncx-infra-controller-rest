@@ -418,10 +418,11 @@ func (ipbsd IPBlockSQLDAO) GetAll(ctx context.Context, tx *db.Tx, filter IPBlock
 		ipbsd.tracerSpan.SetAttribute(ipblockDAOSpan, "id", filter.IPBlockIDs)
 	}
 
-	if searchQuery, normalizedTokens, ok := normalizeSearchQuery(filter.SearchQuery); ok {
+	searchQuery, searchTokens, ok := db.NormalizeSearchQuery(filter.SearchQuery)
+	if ok {
 		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
-				Where("to_tsvector('english', (coalesce(ipb.name, ' ') || ' ' || coalesce(ipb.description, ' ') || ' ' || coalesce(ipb.status, ' '))) @@ to_tsquery('english', ?)", *normalizedTokens).
+				Where("to_tsvector('english', (coalesce(ipb.name, ' ') || ' ' || coalesce(ipb.description, ' ') || ' ' || coalesce(ipb.status, ' '))) @@ to_tsquery('english', ?)", *searchTokens).
 				WhereOr("ipb.name ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("ipb.description ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("ipb.status ILIKE ?", "%"+searchQuery+"%")

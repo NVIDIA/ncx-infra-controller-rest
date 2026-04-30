@@ -387,10 +387,11 @@ func (emsd ExpectedMachineSQLDAO) setQueryWithFilter(filter ExpectedMachineFilte
 		}
 	}
 
-	if searchQuery, normalizedTokens, ok := normalizeSearchQuery(filter.SearchQuery); ok {
+	searchQuery, searchTokens, ok := db.NormalizeSearchQuery(filter.SearchQuery)
+	if ok {
 		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
-				Where("to_tsvector('english', (coalesce(em.bmc_mac_address, ' ') || ' ' || coalesce(em.chassis_serial_number, ' ') || ' ' || coalesce(em.sku_id, ' ') || ' ' || coalesce(em.machine_id, ' ') || ' ' || coalesce(em.fallback_dpu_serial_numbers::text, ' ') || ' ' || coalesce(em.labels::text, ' '))) @@ to_tsquery('english', ?)", *normalizedTokens).
+				Where("to_tsvector('english', (coalesce(em.bmc_mac_address, ' ') || ' ' || coalesce(em.chassis_serial_number, ' ') || ' ' || coalesce(em.sku_id, ' ') || ' ' || coalesce(em.machine_id, ' ') || ' ' || coalesce(em.fallback_dpu_serial_numbers::text, ' ') || ' ' || coalesce(em.labels::text, ' '))) @@ to_tsquery('english', ?)", *searchTokens).
 				WhereOr("em.bmc_mac_address ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("em.chassis_serial_number ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("em.sku_id ILIKE ?", "%"+searchQuery+"%").

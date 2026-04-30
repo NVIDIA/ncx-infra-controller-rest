@@ -406,10 +406,11 @@ func (vsd VpcSQLDAO) setQueryWithFilter(filter VpcFilterInput, query *bun.Select
 		}
 	}
 
-	if searchQuery, normalizedTokens, ok := normalizeSearchQuery(filter.SearchQuery); ok {
+	searchQuery, searchTokens, ok := db.NormalizeSearchQuery(filter.SearchQuery)
+	if ok {
 		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
-				Where("to_tsvector('english', (coalesce(v.name, ' ') || ' ' || coalesce(v.description, ' ') || ' ' || coalesce(v.network_virtualization_type, ' ') || ' ' || coalesce(v.status, ' ') || ' ' || coalesce(v.labels::text, ' '))) @@ to_tsquery('english', ?)", *normalizedTokens).
+				Where("to_tsvector('english', (coalesce(v.name, ' ') || ' ' || coalesce(v.description, ' ') || ' ' || coalesce(v.network_virtualization_type, ' ') || ' ' || coalesce(v.status, ' ') || ' ' || coalesce(v.labels::text, ' '))) @@ to_tsquery('english', ?)", *searchTokens).
 				WhereOr("v.name ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("v.description ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("v.network_virtualization_type ILIKE ?", "%"+searchQuery+"%").

@@ -599,7 +599,8 @@ func (gash GetAllOperatingSystemHandler) Handle(c echo.Context) error {
 	}
 
 	// Get query text for full text search from query param
-	if searchQuery := common.GetSearchQuery(c); searchQuery != nil {
+	searchQuery := common.GetSearchQuery(c)
+	if searchQuery != nil {
 		filter.SearchQuery = searchQuery
 		gash.tracerSpan.SetAttribute(handlerSpan, attribute.String("query", *searchQuery), logger)
 	}

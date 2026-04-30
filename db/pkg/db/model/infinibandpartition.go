@@ -288,10 +288,11 @@ func (ibpsd InfiniBandPartitionSQLDAO) GetAll(ctx context.Context, tx *db.Tx, fi
 		ibpsd.tracerSpan.SetAttribute(InfiniBandPartitionDAOSpan, "partition_name", filter.PartitionNames)
 	}
 
-	if searchQuery, normalizedTokens, ok := normalizeSearchQuery(filter.SearchQuery); ok {
+	searchQuery, searchTokens, ok := db.NormalizeSearchQuery(filter.SearchQuery)
+	if ok {
 		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
-				Where("to_tsvector('english', (coalesce(ibp.name, ' ') || ' ' || coalesce(ibp.description, ' ') || ' ' || coalesce(ibp.partition_key, ' ') || ' ' || coalesce(ibp.partition_name, ' ') || ' ' || coalesce(ibp.status, ' ') || ' ' || coalesce(ibp.labels::text, ' '))) @@ to_tsquery('english', ?)", *normalizedTokens).
+				Where("to_tsvector('english', (coalesce(ibp.name, ' ') || ' ' || coalesce(ibp.description, ' ') || ' ' || coalesce(ibp.partition_key, ' ') || ' ' || coalesce(ibp.partition_name, ' ') || ' ' || coalesce(ibp.status, ' ') || ' ' || coalesce(ibp.labels::text, ' '))) @@ to_tsquery('english', ?)", *searchTokens).
 				WhereOr("ibp.name ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("ibp.description ILIKE ?", "%"+searchQuery+"%").
 				WhereOr("ibp.partition_key ILIKE ?", "%"+searchQuery+"%").
