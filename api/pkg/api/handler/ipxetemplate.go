@@ -33,6 +33,7 @@ import (
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	cdbp "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog"
@@ -113,8 +114,8 @@ func (h GetAllIpxeTemplateHandler) Handle(c echo.Context) error {
 	// Note on tenant-path scoping: tenant access is established per-site via
 	// `TenantSite` associations (a tenant may be associated with some sites of
 	// a provider but not others).
-	providerSites := map[uuid.UUID]struct{}{}
-	tenantSites := map[uuid.UUID]struct{}{}
+	providerSites := mapset.NewSet[uuid.UUID]()
+	tenantSites := mapset.NewSet[uuid.UUID]()
 
 	if infrastructureProvider != nil {
 		siteDAO := cdbm.NewSiteDAO(h.dbSession)
@@ -128,7 +129,7 @@ func (h GetAllIpxeTemplateHandler) Handle(c echo.Context) error {
 			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve provider sites, DB error", nil)
 		}
 		for i := range sites {
-			providerSites[sites[i].ID] = struct{}{}
+			providerSites.Add(sites[i].ID)
 		}
 	}
 
@@ -144,16 +145,12 @@ func (h GetAllIpxeTemplateHandler) Handle(c echo.Context) error {
 			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant Site associations, DB error", nil)
 		}
 		for i := range tss {
-			tenantSites[tss[i].SiteID] = struct{}{}
+			tenantSites.Add(tss[i].SiteID)
 		}
 	}
 
 	isAuthorized := func(id uuid.UUID) bool {
-		if _, ok := providerSites[id]; ok {
-			return true
-		}
-		_, ok := tenantSites[id]
-		return ok
+		return providerSites.Contains(id) || tenantSites.Contains(id)
 	}
 
 	// Determine the effective site filter:
@@ -169,20 +166,7 @@ func (h GetAllIpxeTemplateHandler) Handle(c echo.Context) error {
 		}
 		effectiveSiteIDs = requestedSiteIDs
 	} else {
-		effectiveSiteIDs = make([]uuid.UUID, 0, len(providerSites)+len(tenantSites))
-		seen := map[uuid.UUID]struct{}{}
-		for id := range providerSites {
-			if _, ok := seen[id]; !ok {
-				seen[id] = struct{}{}
-				effectiveSiteIDs = append(effectiveSiteIDs, id)
-			}
-		}
-		for id := range tenantSites {
-			if _, ok := seen[id]; !ok {
-				seen[id] = struct{}{}
-				effectiveSiteIDs = append(effectiveSiteIDs, id)
-			}
-		}
+		effectiveSiteIDs = providerSites.Union(tenantSites).ToSlice()
 	}
 
 	// No authorized sites — neither provider-owned nor reachable via a tenant account.
@@ -214,27 +198,11 @@ func (h GetAllIpxeTemplateHandler) Handle(c echo.Context) error {
 		return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve iPXE template site associations, DB error", nil)
 	}
 
-	templateIDSet := map[uuid.UUID]struct{}{}
-	templateIDs := make([]uuid.UUID, 0, len(associations))
+	templateIDSet := mapset.NewSet[uuid.UUID]()
 	for _, a := range associations {
-		if _, ok := templateIDSet[a.IpxeTemplateID]; ok {
-			continue
-		}
-		templateIDSet[a.IpxeTemplateID] = struct{}{}
-		templateIDs = append(templateIDs, a.IpxeTemplateID)
+		templateIDSet.Add(a.IpxeTemplateID)
 	}
-
-	if len(templateIDs) == 0 {
-		emptyPageResponse := pagination.NewPageResponse(*pageRequest.PageNumber, *pageRequest.PageSize, 0, pageRequest.OrderByStr)
-		emptyPageHeader, err := json.Marshal(emptyPageResponse)
-		if err != nil {
-			logger.Error().Err(err).Msg("error marshaling empty pagination response")
-			return cerr.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to generate pagination response header", nil)
-		}
-		c.Response().Header().Set(pagination.ResponseHeaderName, string(emptyPageHeader))
-		logger.Info().Msg("finishing API handler")
-		return c.JSON(http.StatusOK, []*model.APIIpxeTemplate{})
-	}
+	templateIDs := templateIDSet.ToSlice()
 
 	templateDAO := cdbm.NewIpxeTemplateDAO(h.dbSession)
 	templates, total, err := templateDAO.GetAll(

@@ -217,6 +217,10 @@ func (itd IpxeTemplateSQLDAO) GetAll(ctx context.Context, tx *db.Tx, filter Ipxe
 
 	templates := []IpxeTemplate{}
 
+	if filter.IDs != nil && len(filter.IDs) == 0 {
+		return templates, 0, nil
+	}
+
 	query := db.GetIDB(tx, itd.dbSession).NewSelect().Model(&templates)
 
 	query, err := itd.setQueryWithFilter(filter, query, span)

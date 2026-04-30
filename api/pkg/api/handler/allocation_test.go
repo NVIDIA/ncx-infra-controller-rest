@@ -652,6 +652,126 @@ func TestAllocationHandler_Create(t *testing.T) {
 	}
 }
 
+// TestAllocationHandler_Create_GlobalOSAutoAssociationIdempotent verifies that
+// creating an Allocation for a tenant that previously had (and lost) access to a
+// Site does not fail because the OperatingSystemSiteAssociation from the earlier
+// allocation already exists.
+//
+// Scenario:
+//  1. Tenant has a global-scoped IPXE OS.
+//  2. First Allocation → TenantSite is created → OS is auto-associated with Site.
+//  3. TenantSite is deleted to simulate all Allocations being removed.
+//  4. Second Allocation (same tenant + site) → TenantSite is recreated → OS
+//     auto-association must be skipped (not fail) because the row still exists.
+func TestAllocationHandler_Create_GlobalOSAutoAssociationIdempotent(t *testing.T) {
+	ctx := context.Background()
+	dbSession := testMachineInitDB(t)
+	defer dbSession.Close()
+
+	common.TestSetupSchema(t, dbSession)
+
+	ipOrg := "test-ip-org-idempotent"
+	tnOrg := "test-tn-org-idempotent"
+
+	ipu := testMachineBuildUser(t, dbSession, uuid.New().String(), []string{ipOrg}, []string{"FORGE_PROVIDER_ADMIN"})
+	tnu := testMachineBuildUser(t, dbSession, uuid.New().String(), []string{tnOrg}, []string{"FORGE_TENANT_ADMIN"})
+
+	ip := common.TestBuildInfrastructureProvider(t, dbSession, "TestIpIdempotent", ipOrg, ipu)
+	site := testIPBlockBuildSite(t, dbSession, ip, "testSiteIdempotent", cdbm.SiteStatusRegistered, true, ipu)
+	tenant := testMachineBuildTenant(t, dbSession, tnOrg, "t-idempotent")
+
+	it := common.TestBuildInstanceType(t, dbSession, "testITIdempotent", cdb.GetUUIDPtr(uuid.New()), site, map[string]string{
+		"name":        "test-instance-type-idempotent",
+		"description": "Idempotent test instance type",
+	}, ipu)
+	for i := 0; i < 5; i++ {
+		mc := testInstanceBuildMachine(t, dbSession, ip.ID, site.ID, cdb.GetBoolPtr(false), nil)
+		require.NotNil(t, mc)
+		require.NotNil(t, testInstanceBuildMachineInstanceType(t, dbSession, mc, it))
+	}
+
+	ipb := testIPBlockBuildIPBlock(t, dbSession, "testipb-idempotent", site, ip, &tenant.ID,
+		cdbm.IPBlockRoutingTypeDatacenterOnly, "10.99.0.0", 16, cdbm.IPBlockProtocolVersionV4,
+		false, cdbm.IPBlockStatusReady, ipu)
+
+	ipamStorage := ipam.NewIpamStorage(dbSession.DB, nil)
+	_, err := ipam.CreateIpamEntryForIPBlock(ctx, ipamStorage, ipb.Prefix, ipb.PrefixLength,
+		ipb.RoutingType, ipb.InfrastructureProviderID.String(), ipb.SiteID.String())
+	require.NoError(t, err)
+
+	// A tenant-owned global-scoped IPXE OS — this is what the auto-association code targets.
+	globalScope := cdbm.OperatingSystemScopeGlobal
+	globalOS := &cdbm.OperatingSystem{
+		ID:          uuid.New(),
+		Name:        "global-os-idempotent",
+		TenantID:    cdb.GetUUIDPtr(tenant.ID),
+		Type:        cdbm.OperatingSystemTypeIPXE,
+		IpxeOsScope: &globalScope,
+		IpxeScript:  cdb.GetStrPtr(common.DefaultIpxeScript),
+		IsActive:    true,
+		Status:      cdbm.OperatingSystemStatusReady,
+		CreatedBy:   tnu.ID,
+	}
+	_, err = dbSession.DB.NewInsert().Model(globalOS).Exec(ctx)
+	require.NoError(t, err)
+
+	ac := model.APIAllocationConstraintCreateRequest{
+		ResourceType:    cdbm.AllocationResourceTypeInstanceType,
+		ResourceTypeID:  it.ID.String(),
+		ConstraintType:  cdbm.AllocationConstraintTypeReserved,
+		ConstraintValue: 2,
+	}
+	body, err := json.Marshal(model.APIAllocationCreateRequest{
+		Name:                  "alloc-idempotent-1",
+		Description:           cdb.GetStrPtr(""),
+		TenantID:              tenant.ID.String(),
+		SiteID:                site.ID.String(),
+		AllocationConstraints: []model.APIAllocationConstraintCreateRequest{ac},
+	})
+	require.NoError(t, err)
+
+	// First allocation: TenantSite is created and the global OS is auto-associated.
+	a1 := testCreateAllocation(t, dbSession, ipamStorage, ipu, ipOrg, string(body))
+	require.NotNil(t, a1)
+
+	ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(dbSession)
+	_, err = ossaDAO.GetByOperatingSystemIDAndSiteID(ctx, nil, globalOS.ID, site.ID, nil)
+	require.NoError(t, err, "OS-site association must exist after first allocation")
+
+	// Simulate all Allocations being removed: delete the TenantSite record so that
+	// the next Allocation triggers TenantSite (and OS auto-association) logic again.
+	_, err = dbSession.DB.NewDelete().TableExpr("tenant_site").
+		Where("tenant_id = ? AND site_id = ?", tenant.ID, site.ID).Exec(ctx)
+	require.NoError(t, err)
+
+	body2, err := json.Marshal(model.APIAllocationCreateRequest{
+		Name:                  "alloc-idempotent-2",
+		Description:           cdb.GetStrPtr(""),
+		TenantID:              tenant.ID.String(),
+		SiteID:                site.ID.String(),
+		AllocationConstraints: []model.APIAllocationConstraintCreateRequest{ac},
+	})
+	require.NoError(t, err)
+
+	// Second allocation on the same site: must succeed even though the
+	// OperatingSystemSiteAssociation from the first allocation still exists.
+	a2 := testCreateAllocation(t, dbSession, ipamStorage, ipu, ipOrg, string(body2))
+	require.NotNil(t, a2, "second allocation must succeed when OS-site association already exists")
+
+	// The association should still exist exactly once (not duplicated).
+	ossas, ossaCount, err := ossaDAO.GetAll(ctx, nil,
+		cdbm.OperatingSystemSiteAssociationFilterInput{
+			OperatingSystemIDs: []uuid.UUID{globalOS.ID},
+			SiteIDs:            []uuid.UUID{site.ID},
+		},
+		cdbp.PageInput{},
+		nil,
+	)
+	require.NoError(t, err)
+	assert.Equal(t, 1, ossaCount, "OS-site association must exist exactly once after both allocations")
+	_ = ossas
+}
+
 func testCreateAllocation(t *testing.T, dbSession *cdb.Session, ipamStorage cipam.Storage, user *cdbm.User, reqOrgName, reqBody string) *model.APIAllocation {
 	ctx := context.Background()
 	e := echo.New()

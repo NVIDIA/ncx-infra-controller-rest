@@ -1904,7 +1904,7 @@ func (uih UpdateInstanceHandler) buildInstanceUpdateRequestOsConfig(c echo.Conte
 
 		// Confirm ownership between tenant and OS.
 		// Provider-owned OS (TenantID is nil) is accessible to any tenant.
-		if os.TenantID != nil && os.TenantID.String() != instance.Tenant.ID.String() {
+		if !(os.TenantID == nil || *os.TenantID == instance.TenantID) {
 			logger.Error().Msg("OperatingSystem in request is not owned by tenant")
 			return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Operating system specified in request is not owned by Tenant", nil)
 		}

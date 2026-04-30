@@ -478,14 +478,21 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 		}
 		ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(cah.dbSession)
 		for _, gos := range globalTenantOSes {
-			if _, aerr := ossaDAO.Create(ctx, tx, cdbm.OperatingSystemSiteAssociationCreateInput{
-				OperatingSystemID: gos.ID,
-				SiteID:            site.ID,
-				Status:            cdbm.OperatingSystemSiteAssociationStatusSyncing,
-				CreatedBy:         dbUser.ID,
-			}); aerr != nil {
-				logger.Error().Err(aerr).Str("osID", gos.ID.String()).Msg("Failed to auto-associate tenant global OS with new site")
+			_, aerr := ossaDAO.GetByOperatingSystemIDAndSiteID(ctx, tx, gos.ID, site.ID, nil)
+			if aerr != nil && aerr != cdb.ErrDoesNotExist {
+				logger.Error().Err(aerr).Str("osID", gos.ID.String()).Msg("Failed to check existing OS-site association")
 				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to associate global-scoped Operating Systems with new Site", nil)
+			}
+			if aerr == cdb.ErrDoesNotExist {
+				if _, aerr = ossaDAO.Create(ctx, tx, cdbm.OperatingSystemSiteAssociationCreateInput{
+					OperatingSystemID: gos.ID,
+					SiteID:            site.ID,
+					Status:            cdbm.OperatingSystemSiteAssociationStatusSyncing,
+					CreatedBy:         dbUser.ID,
+				}); aerr != nil {
+					logger.Error().Err(aerr).Str("osID", gos.ID.String()).Msg("Failed to auto-associate tenant global OS with new site")
+					return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to associate global-scoped Operating Systems with new Site", nil)
+				}
 			}
 		}
 		if len(globalTenantOSes) > 0 {

@@ -617,6 +617,12 @@ func (mos ManageOperatingSystem) UpdateOperatingSystemsInDB(ctx context.Context,
 				slogger.Error().Err(ossaErr).Msg("Failed to create site association for new OS")
 				continue
 			}
+
+			// Newly-created OS: definition and per-site association have just been
+			// written with the reported state. Skip the existing-OS update path
+			// below (it dereferences existingOS which is nil here) and do not add
+			// to globalOrLimitedOSIDs because new records are always Local scope.
+			continue
 		}
 
 		// REST layer has already soft-deleted this OS (user-initiated)
@@ -662,17 +668,17 @@ func (mos ManageOperatingSystem) UpdateOperatingSystemsInDB(ctx context.Context,
 				slogger.Error().Err(serr).Msg("Failed to create Operating System Site Association")
 				continue
 			}
-		}
-
-		// Update existing Operating System Site Association
-		_, uerr := ossaDAO.Update(ctx, nil, cdbm.OperatingSystemSiteAssociationUpdateInput{
-			OperatingSystemSiteAssociationID: ossa.ID,
-			Status:                           &ossaStatus,
-			ControllerState:                  &controllerState,
-		})
-		if uerr != nil {
-			slogger.Error().Err(uerr).Msg("Failed to update Operating System Site Association")
-			continue
+		} else {
+			// Update existing Operating System Site Association
+			_, uerr := ossaDAO.Update(ctx, nil, cdbm.OperatingSystemSiteAssociationUpdateInput{
+				OperatingSystemSiteAssociationID: ossa.ID,
+				Status:                           &ossaStatus,
+				ControllerState:                  &controllerState,
+			})
+			if uerr != nil {
+				slogger.Error().Err(uerr).Msg("Failed to update Operating System Site Association")
+				continue
+			}
 		}
 
 		// TODO: Is this correct?
@@ -680,14 +686,18 @@ func (mos ManageOperatingSystem) UpdateOperatingSystemsInDB(ctx context.Context,
 			globalOrLimitedOSIDs[reportedOSID] = struct{}{}
 		}
 
-		// Operating System exists in both REST and Site, update the REST record if it is newer
-		// Backfill: older records may have been created with tenant_id set and no infrastructure_provider_id (before this ownership model was established).
-		needsProviderBackfill := existingOS.InfrastructureProviderID == nil
-		needsOrgBackfill := existingOS.Org == "" && site.Org != ""
-		needsIsActiveCorrection := existingOS.IsActive != reportedOS.IsActive
-		needsTenantClear := existingOS.TenantID != nil
+		// Operating System exists in both REST and Site; update the REST record only for
+		// Local-scoped OSes (Site is the source of truth for the definition).
+		// Global/Limited OSes are REST-owned: skip the definition update and rely solely on
+		// the aggregate status recomputation that runs at the end of this function.
+		// Backfill: older records may have been created with tenant_id set and no
+		// infrastructure_provider_id (before this ownership model was established).
+		needsProviderBackfill := isLocalScope && existingOS.InfrastructureProviderID == nil
+		needsOrgBackfill := isLocalScope && existingOS.Org == "" && site.Org != ""
+		needsIsActiveCorrection := isLocalScope && existingOS.IsActive != reportedOS.IsActive
+		needsTenantClear := isLocalScope && existingOS.TenantID != nil
 
-		if coreUpdated.After(existingOS.Updated) || needsProviderBackfill || needsOrgBackfill || needsIsActiveCorrection || needsTenantClear {
+		if isLocalScope && (coreUpdated.After(existingOS.Updated) || needsProviderBackfill || needsOrgBackfill || needsIsActiveCorrection || needsTenantClear) {
 			controllerState := cdbm.OperatingSystemStatusFromProtoMap[reportedOS.Status]
 			if controllerState == "" {
 				slogger.Warn().Str("Status", reportedOS.Status.String()).Msg("Received unknown status from Site, using `Syncing` as default")
