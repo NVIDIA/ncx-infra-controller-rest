@@ -44,6 +44,66 @@ import (
 	tclient "go.temporal.io/sdk/client"
 )
 
+// expectedSwitchToProto builds the workflow proto. BMC and NVOS credentials
+// and labels are passed separately because they may come from the API request
+// rather than the DB record (credentials aren't persisted at all).
+func expectedSwitchToProto(es *cdbm.ExpectedSwitch, defaultBmcUsername, defaultBmcPassword, nvOsUsername, nvOsPassword *string, labels map[string]string) *cwssaws.ExpectedSwitch {
+	proto := &cwssaws.ExpectedSwitch{
+		ExpectedSwitchId:   &cwssaws.UUID{Value: es.ID.String()},
+		BmcMacAddress:      es.BmcMacAddress,
+		SwitchSerialNumber: es.SwitchSerialNumber,
+	}
+
+	if es.RackID != nil {
+		proto.RackId = &cwssaws.RackId{Id: *es.RackID}
+	}
+	if es.Name != nil {
+		proto.Name = es.Name
+	}
+	if es.Manufacturer != nil {
+		proto.Manufacturer = es.Manufacturer
+	}
+	if es.Model != nil {
+		proto.Model = es.Model
+	}
+	if es.Description != nil {
+		proto.Description = es.Description
+	}
+	if es.FirmwareVersion != nil {
+		proto.FirmwareVersion = es.FirmwareVersion
+	}
+	if es.SlotID != nil {
+		proto.SlotId = es.SlotID
+	}
+	if es.TrayIdx != nil {
+		proto.TrayIdx = es.TrayIdx
+	}
+	if es.HostID != nil {
+		proto.HostId = es.HostID
+	}
+
+	if defaultBmcUsername != nil {
+		proto.BmcUsername = *defaultBmcUsername
+	}
+	if defaultBmcPassword != nil {
+		proto.BmcPassword = *defaultBmcPassword
+	}
+	if nvOsUsername != nil {
+		proto.NvosUsername = nvOsUsername
+	}
+	if nvOsPassword != nil {
+		proto.NvosPassword = nvOsPassword
+	}
+
+	if protoLabels := util.ProtobufLabelsFromAPILabels(labels); protoLabels != nil {
+		proto.Metadata = &cwssaws.Metadata{
+			Labels: protoLabels,
+		}
+	}
+
+	return proto
+}
+
 // ~~~~~ Create Handler ~~~~~ //
 
 // CreateExpectedSwitchHandler is the API Handler for creating new ExpectedSwitch
@@ -195,72 +255,14 @@ func (cesh CreateExpectedSwitchHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Expected Switch due to DB error", nil)
 	}
 
-	// Build the create request for workflow
-	// NVOS credentials come from API request since they're not stored in DB
-	createExpectedSwitchRequest := &cwssaws.ExpectedSwitch{
-		ExpectedSwitchId:   &cwssaws.UUID{Value: expectedSwitch.ID.String()},
-		BmcMacAddress:      expectedSwitch.BmcMacAddress,
-		SwitchSerialNumber: expectedSwitch.SwitchSerialNumber,
-	}
-
-	if expectedSwitch.RackID != nil {
-		createExpectedSwitchRequest.RackId = &cwssaws.RackId{Id: *expectedSwitch.RackID}
-	}
-
-	if expectedSwitch.Name != nil {
-		createExpectedSwitchRequest.Name = expectedSwitch.Name
-	}
-
-	if expectedSwitch.Manufacturer != nil {
-		createExpectedSwitchRequest.Manufacturer = expectedSwitch.Manufacturer
-	}
-
-	if expectedSwitch.Model != nil {
-		createExpectedSwitchRequest.Model = expectedSwitch.Model
-	}
-
-	if expectedSwitch.Description != nil {
-		createExpectedSwitchRequest.Description = expectedSwitch.Description
-	}
-
-	if expectedSwitch.FirmwareVersion != nil {
-		createExpectedSwitchRequest.FirmwareVersion = expectedSwitch.FirmwareVersion
-	}
-
-	if expectedSwitch.SlotID != nil {
-		createExpectedSwitchRequest.SlotId = expectedSwitch.SlotID
-	}
-
-	if expectedSwitch.TrayIdx != nil {
-		createExpectedSwitchRequest.TrayIdx = expectedSwitch.TrayIdx
-	}
-
-	if expectedSwitch.HostID != nil {
-		createExpectedSwitchRequest.HostId = expectedSwitch.HostID
-	}
-
-	if apiRequest.DefaultBmcUsername != nil {
-		createExpectedSwitchRequest.BmcUsername = *apiRequest.DefaultBmcUsername
-	}
-
-	if apiRequest.DefaultBmcPassword != nil {
-		createExpectedSwitchRequest.BmcPassword = *apiRequest.DefaultBmcPassword
-	}
-
-	if apiRequest.NvOsUsername != nil {
-		createExpectedSwitchRequest.NvosUsername = apiRequest.NvOsUsername
-	}
-
-	if apiRequest.NvOsPassword != nil {
-		createExpectedSwitchRequest.NvosPassword = apiRequest.NvOsPassword
-	}
-
-	protoLabels := util.ProtobufLabelsFromAPILabels(apiRequest.Labels)
-	if protoLabels != nil {
-		createExpectedSwitchRequest.Metadata = &cwssaws.Metadata{
-			Labels: protoLabels,
-		}
-	}
+	createExpectedSwitchRequest := expectedSwitchToProto(
+		expectedSwitch,
+		apiRequest.DefaultBmcUsername,
+		apiRequest.DefaultBmcPassword,
+		apiRequest.NvOsUsername,
+		apiRequest.NvOsPassword,
+		apiRequest.Labels,
+	)
 
 	logger.Info().Msg("triggering Expected Switch create workflow on Site")
 
@@ -713,72 +715,14 @@ func (uesh UpdateExpectedSwitchHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Expected Switch due to DB error", nil)
 	}
 
-	// Build the update request for workflow
-	// NVOS credentials come from API request since they're not stored in DB
-	updateExpectedSwitchRequest := &cwssaws.ExpectedSwitch{
-		ExpectedSwitchId:   &cwssaws.UUID{Value: expectedSwitch.ID.String()},
-		BmcMacAddress:      updatedExpectedSwitch.BmcMacAddress,
-		SwitchSerialNumber: updatedExpectedSwitch.SwitchSerialNumber,
-	}
-
-	if updatedExpectedSwitch.RackID != nil {
-		updateExpectedSwitchRequest.RackId = &cwssaws.RackId{Id: *updatedExpectedSwitch.RackID}
-	}
-
-	if updatedExpectedSwitch.Name != nil {
-		updateExpectedSwitchRequest.Name = updatedExpectedSwitch.Name
-	}
-
-	if updatedExpectedSwitch.Manufacturer != nil {
-		updateExpectedSwitchRequest.Manufacturer = updatedExpectedSwitch.Manufacturer
-	}
-
-	if updatedExpectedSwitch.Model != nil {
-		updateExpectedSwitchRequest.Model = updatedExpectedSwitch.Model
-	}
-
-	if updatedExpectedSwitch.Description != nil {
-		updateExpectedSwitchRequest.Description = updatedExpectedSwitch.Description
-	}
-
-	if updatedExpectedSwitch.FirmwareVersion != nil {
-		updateExpectedSwitchRequest.FirmwareVersion = updatedExpectedSwitch.FirmwareVersion
-	}
-
-	if updatedExpectedSwitch.SlotID != nil {
-		updateExpectedSwitchRequest.SlotId = updatedExpectedSwitch.SlotID
-	}
-
-	if updatedExpectedSwitch.TrayIdx != nil {
-		updateExpectedSwitchRequest.TrayIdx = updatedExpectedSwitch.TrayIdx
-	}
-
-	if updatedExpectedSwitch.HostID != nil {
-		updateExpectedSwitchRequest.HostId = updatedExpectedSwitch.HostID
-	}
-
-	if apiRequest.DefaultBmcUsername != nil {
-		updateExpectedSwitchRequest.BmcUsername = *apiRequest.DefaultBmcUsername
-	}
-
-	if apiRequest.DefaultBmcPassword != nil {
-		updateExpectedSwitchRequest.BmcPassword = *apiRequest.DefaultBmcPassword
-	}
-
-	if apiRequest.NvOsUsername != nil {
-		updateExpectedSwitchRequest.NvosUsername = apiRequest.NvOsUsername
-	}
-
-	if apiRequest.NvOsPassword != nil {
-		updateExpectedSwitchRequest.NvosPassword = apiRequest.NvOsPassword
-	}
-
-	protoLabels := util.ProtobufLabelsFromAPILabels(apiRequest.Labels)
-	if protoLabels != nil {
-		updateExpectedSwitchRequest.Metadata = &cwssaws.Metadata{
-			Labels: protoLabels,
-		}
-	}
+	updateExpectedSwitchRequest := expectedSwitchToProto(
+		updatedExpectedSwitch,
+		apiRequest.DefaultBmcUsername,
+		apiRequest.DefaultBmcPassword,
+		apiRequest.NvOsUsername,
+		apiRequest.NvOsPassword,
+		apiRequest.Labels,
+	)
 
 	logger.Info().Msg("triggering ExpectedSwitch update workflow")
 

@@ -43,6 +43,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
 	common "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
 	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
 	auth "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/authorization"
@@ -425,19 +426,7 @@ func (cvh CreateVPCHandler) Handle(c echo.Context) error {
 		metadata.Description = *vpc.Description
 	}
 
-	// Prepare labels for site controller
-	if len(vpc.Labels) > 0 {
-		var labels []*cwssaws.Label
-		for key, value := range vpc.Labels {
-			curVal := value
-			localLable := &cwssaws.Label{
-				Key:   key,
-				Value: &curVal,
-			}
-			labels = append(labels, localLable)
-		}
-		metadata.Labels = labels
-	}
+	metadata.Labels = util.ProtobufLabelsFromAPILabels(vpc.Labels)
 	createVpcRequest.Metadata = metadata
 
 	logger.Info().Msg("triggering VPC create workflow")
@@ -866,18 +855,7 @@ func (uvh UpdateVPCHandler) Handle(c echo.Context) error {
 		metadata.Description = *vpc.Description
 	}
 
-	// Prepare the labels
-	clabels := []*cwssaws.Label{}
-	for key, value := range vpc.Labels {
-		curVal := value
-		localLable := &cwssaws.Label{
-			Key:   key,
-			Value: &curVal,
-		}
-		clabels = append(clabels, localLable)
-	}
-
-	metadata.Labels = clabels
+	metadata.Labels = util.ProtobufLabelsFromAPILabels(vpc.Labels)
 	updateVpcRequest.Metadata = metadata
 
 	logger.Info().Msg("triggering VPC update workflow")

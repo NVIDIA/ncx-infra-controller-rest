@@ -49,6 +49,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
 	ch "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
+	mutil "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
 	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
 	auth "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/authorization"
@@ -395,19 +396,7 @@ func (cith CreateInstanceTypeHandler) Handle(c echo.Context) error {
 		metadata.Description = *it.Description
 	}
 
-	// Prepare labels for site controller
-	if len(it.Labels) > 0 {
-		var labels []*cwssaws.Label
-		for key, value := range it.Labels {
-			curVal := value
-			localLable := &cwssaws.Label{
-				Key:   key,
-				Value: &curVal,
-			}
-			labels = append(labels, localLable)
-		}
-		metadata.Labels = labels
-	}
+	metadata.Labels = mutil.ProtobufLabelsFromAPILabels(it.Labels)
 
 	createInstanceTypeRequest.Metadata = metadata
 
@@ -1415,17 +1404,7 @@ func (uith UpdateInstanceTypeHandler) Handle(c echo.Context) error {
 		metadata.Description = *it.Description
 	}
 
-	// Prepare the labels for the metadata of the carbide call.
-	var labels []*cwssaws.Label
-	for key, value := range it.Labels {
-		curVal := value
-		localLable := &cwssaws.Label{
-			Key:   key,
-			Value: &curVal,
-		}
-		labels = append(labels, localLable)
-	}
-	metadata.Labels = labels
+	metadata.Labels = mutil.ProtobufLabelsFromAPILabels(it.Labels)
 
 	updateInstanceTypeRequest.Metadata = metadata
 

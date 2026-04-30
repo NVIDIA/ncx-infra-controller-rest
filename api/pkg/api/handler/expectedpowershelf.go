@@ -44,6 +44,63 @@ import (
 	tclient "go.temporal.io/sdk/client"
 )
 
+// expectedPowerShelfToProto builds the workflow proto. BMC credentials and
+// labels are passed separately because they may come from the API request
+// rather than the DB record (BMC credentials aren't persisted at all).
+func expectedPowerShelfToProto(eps *cdbm.ExpectedPowerShelf, defaultBmcUsername, defaultBmcPassword *string, labels map[string]string) *cwssaws.ExpectedPowerShelf {
+	proto := &cwssaws.ExpectedPowerShelf{
+		ExpectedPowerShelfId: &cwssaws.UUID{Value: eps.ID.String()},
+		BmcMacAddress:        eps.BmcMacAddress,
+		ShelfSerialNumber:    eps.ShelfSerialNumber,
+	}
+
+	if eps.IpAddress != nil {
+		proto.BmcIpAddress = *eps.IpAddress
+	}
+	if eps.RackID != nil {
+		proto.RackId = &cwssaws.RackId{Id: *eps.RackID}
+	}
+	if eps.Name != nil {
+		proto.Name = eps.Name
+	}
+	if eps.Manufacturer != nil {
+		proto.Manufacturer = eps.Manufacturer
+	}
+	if eps.Model != nil {
+		proto.Model = eps.Model
+	}
+	if eps.Description != nil {
+		proto.Description = eps.Description
+	}
+	if eps.FirmwareVersion != nil {
+		proto.FirmwareVersion = eps.FirmwareVersion
+	}
+	if eps.SlotID != nil {
+		proto.SlotId = eps.SlotID
+	}
+	if eps.TrayIdx != nil {
+		proto.TrayIdx = eps.TrayIdx
+	}
+	if eps.HostID != nil {
+		proto.HostId = eps.HostID
+	}
+
+	if defaultBmcUsername != nil {
+		proto.BmcUsername = *defaultBmcUsername
+	}
+	if defaultBmcPassword != nil {
+		proto.BmcPassword = *defaultBmcPassword
+	}
+
+	if protoLabels := util.ProtobufLabelsFromAPILabels(labels); protoLabels != nil {
+		proto.Metadata = &cwssaws.Metadata{
+			Labels: protoLabels,
+		}
+	}
+
+	return proto
+}
+
 // ~~~~~ Create Handler ~~~~~ //
 
 // CreateExpectedPowerShelfHandler is the API Handler for creating new ExpectedPowerShelf
@@ -196,68 +253,12 @@ func (cepsh CreateExpectedPowerShelfHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Expected Power Shelf due to DB error", nil)
 	}
 
-	// Build the create request for workflow
-	// BMC credentials come from API request since they're not stored in DB
-	createExpectedPowerShelfRequest := &cwssaws.ExpectedPowerShelf{
-		ExpectedPowerShelfId: &cwssaws.UUID{Value: expectedPowerShelf.ID.String()},
-		BmcMacAddress:        expectedPowerShelf.BmcMacAddress,
-		ShelfSerialNumber:    expectedPowerShelf.ShelfSerialNumber,
-	}
-
-	if expectedPowerShelf.IpAddress != nil {
-		createExpectedPowerShelfRequest.BmcIpAddress = *expectedPowerShelf.IpAddress
-	}
-
-	if expectedPowerShelf.RackID != nil {
-		createExpectedPowerShelfRequest.RackId = &cwssaws.RackId{Id: *expectedPowerShelf.RackID}
-	}
-
-	if expectedPowerShelf.Name != nil {
-		createExpectedPowerShelfRequest.Name = expectedPowerShelf.Name
-	}
-
-	if expectedPowerShelf.Manufacturer != nil {
-		createExpectedPowerShelfRequest.Manufacturer = expectedPowerShelf.Manufacturer
-	}
-
-	if expectedPowerShelf.Model != nil {
-		createExpectedPowerShelfRequest.Model = expectedPowerShelf.Model
-	}
-
-	if expectedPowerShelf.Description != nil {
-		createExpectedPowerShelfRequest.Description = expectedPowerShelf.Description
-	}
-
-	if expectedPowerShelf.FirmwareVersion != nil {
-		createExpectedPowerShelfRequest.FirmwareVersion = expectedPowerShelf.FirmwareVersion
-	}
-
-	if expectedPowerShelf.SlotID != nil {
-		createExpectedPowerShelfRequest.SlotId = expectedPowerShelf.SlotID
-	}
-
-	if expectedPowerShelf.TrayIdx != nil {
-		createExpectedPowerShelfRequest.TrayIdx = expectedPowerShelf.TrayIdx
-	}
-
-	if expectedPowerShelf.HostID != nil {
-		createExpectedPowerShelfRequest.HostId = expectedPowerShelf.HostID
-	}
-
-	if apiRequest.DefaultBmcUsername != nil {
-		createExpectedPowerShelfRequest.BmcUsername = *apiRequest.DefaultBmcUsername
-	}
-
-	if apiRequest.DefaultBmcPassword != nil {
-		createExpectedPowerShelfRequest.BmcPassword = *apiRequest.DefaultBmcPassword
-	}
-
-	protoLabels := util.ProtobufLabelsFromAPILabels(apiRequest.Labels)
-	if protoLabels != nil {
-		createExpectedPowerShelfRequest.Metadata = &cwssaws.Metadata{
-			Labels: protoLabels,
-		}
-	}
+	createExpectedPowerShelfRequest := expectedPowerShelfToProto(
+		expectedPowerShelf,
+		apiRequest.DefaultBmcUsername,
+		apiRequest.DefaultBmcPassword,
+		apiRequest.Labels,
+	)
 
 	logger.Info().Msg("triggering Expected Power Shelf create workflow on Site")
 
@@ -711,68 +712,12 @@ func (uepsh UpdateExpectedPowerShelfHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Expected Power Shelf due to DB error", nil)
 	}
 
-	// Build the update request for workflow
-	// BMC credentials come from API request since they're not stored in DB
-	updateExpectedPowerShelfRequest := &cwssaws.ExpectedPowerShelf{
-		ExpectedPowerShelfId: &cwssaws.UUID{Value: expectedPowerShelf.ID.String()},
-		BmcMacAddress:        updatedExpectedPowerShelf.BmcMacAddress,
-		ShelfSerialNumber:    updatedExpectedPowerShelf.ShelfSerialNumber,
-	}
-
-	if updatedExpectedPowerShelf.IpAddress != nil {
-		updateExpectedPowerShelfRequest.BmcIpAddress = *updatedExpectedPowerShelf.IpAddress
-	}
-
-	if updatedExpectedPowerShelf.RackID != nil {
-		updateExpectedPowerShelfRequest.RackId = &cwssaws.RackId{Id: *updatedExpectedPowerShelf.RackID}
-	}
-
-	if updatedExpectedPowerShelf.Name != nil {
-		updateExpectedPowerShelfRequest.Name = updatedExpectedPowerShelf.Name
-	}
-
-	if updatedExpectedPowerShelf.Manufacturer != nil {
-		updateExpectedPowerShelfRequest.Manufacturer = updatedExpectedPowerShelf.Manufacturer
-	}
-
-	if updatedExpectedPowerShelf.Model != nil {
-		updateExpectedPowerShelfRequest.Model = updatedExpectedPowerShelf.Model
-	}
-
-	if updatedExpectedPowerShelf.Description != nil {
-		updateExpectedPowerShelfRequest.Description = updatedExpectedPowerShelf.Description
-	}
-
-	if updatedExpectedPowerShelf.FirmwareVersion != nil {
-		updateExpectedPowerShelfRequest.FirmwareVersion = updatedExpectedPowerShelf.FirmwareVersion
-	}
-
-	if updatedExpectedPowerShelf.SlotID != nil {
-		updateExpectedPowerShelfRequest.SlotId = updatedExpectedPowerShelf.SlotID
-	}
-
-	if updatedExpectedPowerShelf.TrayIdx != nil {
-		updateExpectedPowerShelfRequest.TrayIdx = updatedExpectedPowerShelf.TrayIdx
-	}
-
-	if updatedExpectedPowerShelf.HostID != nil {
-		updateExpectedPowerShelfRequest.HostId = updatedExpectedPowerShelf.HostID
-	}
-
-	if apiRequest.DefaultBmcUsername != nil {
-		updateExpectedPowerShelfRequest.BmcUsername = *apiRequest.DefaultBmcUsername
-	}
-
-	if apiRequest.DefaultBmcPassword != nil {
-		updateExpectedPowerShelfRequest.BmcPassword = *apiRequest.DefaultBmcPassword
-	}
-
-	protoLabels := util.ProtobufLabelsFromAPILabels(apiRequest.Labels)
-	if protoLabels != nil {
-		updateExpectedPowerShelfRequest.Metadata = &cwssaws.Metadata{
-			Labels: protoLabels,
-		}
-	}
+	updateExpectedPowerShelfRequest := expectedPowerShelfToProto(
+		updatedExpectedPowerShelf,
+		apiRequest.DefaultBmcUsername,
+		apiRequest.DefaultBmcPassword,
+		apiRequest.Labels,
+	)
 
 	logger.Info().Msg("triggering ExpectedPowerShelf update workflow")
 
