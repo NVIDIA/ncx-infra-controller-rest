@@ -85,8 +85,10 @@ func TestAllocationConstraintHandler_Update(t *testing.T) {
 		"description": "Test Instance Type 2 Description",
 	}, ipu)
 
-	// build some machines, and map the machines to the instancetypes
-	for i := 1; i <= 30; i++ {
+	// Build enough Machines for Instance Type it1 so global reserved Allocation Constraints
+	// (this test's allocations plus tenant2's it1 allocation) stay below the Machine count when
+	// CheckMachinesForInstanceTypeAllocation adds an increase delta.
+	for i := 1; i <= 40; i++ {
 		mc := testInstanceBuildMachine(t, dbSession, ip.ID, site.ID, cdb.GetBoolPtr(false), nil)
 		assert.NotNil(t, mc)
 		mcinst1 := testInstanceBuildMachineInstanceType(t, dbSession, mc, it1)
@@ -192,7 +194,7 @@ func TestAllocationConstraintHandler_Update(t *testing.T) {
 	okBodyIT1, err := json.Marshal(model.APIAllocationConstraintUpdateRequest{ConstraintValue: 23})
 	assert.Nil(t, err)
 
-	errBodyIT1, err := json.Marshal(model.APIAllocationConstraintUpdateRequest{ConstraintValue: 26})
+	errBodyIT1, err := json.Marshal(model.APIAllocationConstraintUpdateRequest{ConstraintValue: 50})
 	assert.Nil(t, err)
 
 	okBodyIP1, err := json.Marshal(model.APIAllocationConstraintUpdateRequest{ConstraintValue: 26})
@@ -536,7 +538,7 @@ func TestAllocationConstraintHandler_Update(t *testing.T) {
 			acID:               acsip1[0].ID.String(),
 			expectedErr:        true,
 			expectedStatus:     http.StatusBadRequest,
-			expectedIpamErrMsg: "Could not create updated IPAM entry for Tenant IP Block for Allocation Constraint. Details: unable to persist created child:unable to parse cidr:invalid Prefix",
+			expectedIpamErrMsg: "Failed to create updated IPAM entry for Allocation Constraint's Tenant IP Block. Details: unable to persist created child:unable to parse cidr:invalid Prefix",
 		},
 	}
 	for _, tc := range tests {
