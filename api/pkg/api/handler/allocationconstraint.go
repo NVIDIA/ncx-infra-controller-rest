@@ -391,7 +391,7 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 			if err != nil {
 				logger.Error().Err(err).Msg("unable to delete child IPAM entry for updated Allocation Constraint")
 				if !errors.Is(err, ipam.ErrPrefixDoesNotExistForIPBlock) {
-					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not find IPAM entry for existing Tenant IP Block for Allocation Constraint. Details: %s", err.Error()), nil)
+					return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to delete existing IPAM entry for Allocation Constraint's Tenant IP Block. Details: %s", err.Error()), nil)
 				}
 			}
 
@@ -405,7 +405,7 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 				}
 
 				logger.Warn().Err(serr).Msg("unable to create child IPAM entry for updated Allocation Constraint")
-				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Could not create updated IPAM entry for Tenant IP Block for Allocation Constraint. Details: %s", serr.Error()), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Failed to create updated IPAM entry for Allocation Constraint's Tenant IP Block. Details: %s", serr.Error()), nil)
 			}
 			logger.Info().Str("ChildCIDR", newChildPrefix.Cidr).Msg("created child CIDR")
 
@@ -413,7 +413,7 @@ func (uach UpdateAllocationConstraintHandler) Handle(c echo.Context) error {
 			newPrefix, newBlockSize, serr := ipam.ParseCidrIntoPrefixAndBlockSize(newChildPrefix.Cidr)
 			if serr != nil {
 				logger.Error().Err(serr).Msg("unable to parse CIDR for new Tenant IP Block for Allocation Constraint")
-				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to parse CIDR for updated Tenant IP Block for Allocation Constraint. Details: %s", serr.Error()), nil)
+				return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to parse CIDR for Allocation Constraint's Tenant IP Block. Details: %s", serr.Error()), nil)
 			}
 
 			// Update existing IP Block with new prefix, block size
