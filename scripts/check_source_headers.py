@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from __future__ import annotations
 
@@ -19,7 +31,6 @@ NVIDIA_COPYRIGHT = (
 )
 PROPRIETARY_LICENSE = "SPDX-License-Identifier: " + "LicenseRef-NvidiaProprietary"
 DEFAULT_COPYRIGHT = "Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved."
-APACHE_BOILERPLATE_MARKER = "Licensed under the " + "Apache License, Version 2.0"
 HEADER_WINDOW = 4096
 
 BLOCK_COMMENT_EXTENSIONS = {
@@ -67,12 +78,10 @@ BLOCK_PROPRIETARY_RE = re.compile(
     r"\A/\*.*?SPDX-License-Identifier:\s*" + "LicenseRef-NvidiaProprietary" + r".*?\*/\s*",
     re.DOTALL,
 )
-BLOCK_SPDX_RE = re.compile(r"\A/\*.*?SPDX-License-Identifier:.*?\*/\s*", re.DOTALL)
-HASH_SPDX_RE = re.compile(
+HASH_PROPRIETARY_RE = re.compile(
     r"\A(?P<shebang>#![^\n]*\n)?(?P<header>(?:#[^\n]*(?:\n|$)){2,40})",
     re.DOTALL,
 )
-SLASH_SPDX_RE = re.compile(r"\A(?://[^\n]*(?:\n|$)){2,40}", re.DOTALL)
 
 
 def tracked_files(repo: Path) -> list[Path]:
@@ -137,6 +146,18 @@ def block_header(copyright: str) -> str:
     return f"""/*
  * SPDX-FileCopyrightText: {copyright}
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 """
@@ -145,6 +166,18 @@ def block_header(copyright: str) -> str:
 def hash_header(copyright: str) -> str:
     return f"""# SPDX-FileCopyrightText: {copyright}
 # SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """
 
@@ -160,58 +193,12 @@ def ipam_header() -> str:
 
 
 def strip_proprietary_hash_header(text: str) -> tuple[str, str]:
-    match = HASH_SPDX_RE.match(text)
+    match = HASH_PROPRIETARY_RE.match(text)
     if not match or PROPRIETARY_LICENSE not in match.group("header"):
         return "", text
 
     shebang = match.group("shebang") or ""
     return shebang, text[match.end() :]
-
-
-def split_preserved_prefix(path: Path, text: str) -> tuple[str, str]:
-    if text.startswith("#!"):
-        first_line, _, rest = text.partition("\n")
-        return first_line + "\n", rest
-
-    if is_dockerfile(path) and re.match(r"#\s*syntax\s*=", text):
-        first_line, _, rest = text.partition("\n")
-        return first_line + "\n\n", rest.lstrip("\n")
-
-    if text.startswith("// Code generated"):
-        lines = text.splitlines(keepends=True)
-        split_at = 0
-        for index, line in enumerate(lines):
-            if line.startswith("//") or not line.strip():
-                split_at = index + 1
-                continue
-            break
-        return "".join(lines[:split_at]) + "\n", "".join(lines[split_at:]).lstrip("\n")
-
-    return "", text
-
-
-def strip_existing_spdx_header(text: str) -> str:
-    block_match = BLOCK_SPDX_RE.match(text)
-    if block_match:
-        return text[block_match.end() :].lstrip("\n")
-
-    hash_match = HASH_SPDX_RE.match(text)
-    if hash_match and "SPDX-License-Identifier:" in hash_match.group("header"):
-        return text[hash_match.end() :].lstrip("\n")
-
-    slash_match = SLASH_SPDX_RE.match(text)
-    if slash_match and "SPDX-License-Identifier:" in slash_match.group(0):
-        return text[slash_match.end() :].lstrip("\n")
-
-    return text
-
-
-def strip_all_existing_spdx_headers(text: str) -> str:
-    while True:
-        stripped = strip_existing_spdx_header(text)
-        if stripped == text:
-            return text
-        text = stripped
 
 
 def apache_header(path: Path, text: str) -> str:
@@ -225,28 +212,25 @@ def fix_text(path: Path, text: str) -> str:
     if is_ipam_source(path):
         return add_ipam_header(text)
 
-    prefix, body = split_preserved_prefix(path, text)
-    for _ in range(4):
-        body = strip_all_existing_spdx_headers(body)
-        extra_prefix, extra_body = split_preserved_prefix(path, body)
-        if not extra_prefix:
-            break
-        prefix += extra_prefix
-        body = extra_body
-    body = strip_all_existing_spdx_headers(body)
     header = apache_header(path, text)
 
     if comment_style(path) == "block":
-        match = BLOCK_PROPRIETARY_RE.match(body) or BLOCK_SPDX_RE.match(body)
+        match = BLOCK_PROPRIETARY_RE.match(text)
         if match:
-            body = body[match.end() :].lstrip("\n")
-        return prefix + header + body.lstrip("\n")
+            return header + text[match.end() :].lstrip("\n")
+        return header + text.lstrip("\n")
 
-    proprietary_shebang, stripped_body = strip_proprietary_hash_header(prefix + body)
+    shebang = ""
+    body = text
+    if text.startswith("#!"):
+        shebang, _, body = text.partition("\n")
+        shebang += "\n"
+
+    proprietary_shebang, stripped_body = strip_proprietary_hash_header(text)
     if proprietary_shebang:
         return proprietary_shebang + header + stripped_body.lstrip("\n")
 
-    return prefix + header + body.lstrip("\n")
+    return shebang + header + body.lstrip("\n")
 
 
 def add_ipam_header(text: str) -> str:
@@ -288,7 +272,7 @@ def scan(repo: Path, *, fix: bool) -> int:
             header = text[:HEADER_WINDOW]
             if PROPRIETARY_LICENSE in header:
                 proprietary.append(path)
-            elif APACHE_LICENSE not in header or APACHE_BOILERPLATE_MARKER in header:
+            elif APACHE_LICENSE not in header:
                 missing.append(path)
             else:
                 continue
