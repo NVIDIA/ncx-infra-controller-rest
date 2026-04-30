@@ -111,6 +111,29 @@ func TestCarbideAtomicClient_GetClient_ReturnsClientAfterSwap(t *testing.T) {
 	assert.Equal(t, testClient, cac.GetClient())
 }
 
+func TestCarbideAtomicClient_GetForgeClient_ReturnsErrWhenUninitialized(t *testing.T) {
+	cac := &CarbideAtomicClient{
+		value: &atomic.Value{},
+	}
+	// GetForgeClient should return ErrClientNotConnected when no client has been stored,
+	// rather than panicking on a nil-pointer deref.
+	forge, err := cac.GetForgeClient()
+	assert.Nil(t, forge)
+	assert.ErrorIs(t, err, ErrClientNotConnected)
+}
+
+func TestCarbideAtomicClient_GetForgeClient_ReturnsForgeAfterSwap(t *testing.T) {
+	cac := &CarbideAtomicClient{
+		value: &atomic.Value{},
+	}
+	// Once a CarbideClient is stored, GetForgeClient should succeed and delegate to
+	// (*CarbideClient).Carbide(). The underlying carbide field is zero-value
+	// in this test, so we just verify there's no error.
+	cac.value.Store(&CarbideClient{})
+	_, err := cac.GetForgeClient()
+	assert.NoError(t, err)
+}
+
 func TestCarbideAtomicClient_CheckCertificates(t *testing.T) {
 	// Generate files for MD5 hash testing
 	// clientCertBytes := []byte("new test cert file")

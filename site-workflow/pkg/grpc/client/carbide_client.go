@@ -289,6 +289,17 @@ func (cac *CarbideAtomicClient) GetClient() *CarbideClient {
 	return client
 }
 
+// GetForgeClient returns the underlying Forge gRPC client. Returns ErrClientNotConnected
+// if the client has not been initialized or is not currently connected.
+// Prefer this over GetClient() + manual nil-check + .Carbide() at call sites.
+func (cac *CarbideAtomicClient) GetForgeClient() (wflows.ForgeClient, error) {
+	client := cac.GetClient()
+	if client == nil {
+		return nil, ErrClientNotConnected
+	}
+	return client.Carbide(), nil
+}
+
 // CheckAndReloadCerts continuously monitors the TLS certificates for changes.
 // If a change is detected, it reinitializes the CarbideClient with the new certificates to ensure secure communication.
 func (cac *CarbideAtomicClient) CheckAndReloadCerts(initialClientCertMD5, initialServerCAMD5 []byte) {
