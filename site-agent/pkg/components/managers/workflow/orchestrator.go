@@ -277,6 +277,8 @@ func workflowOrchestrator() error {
 	ManagerAccess.API.ExpectedPowerShelf.RegisterSubscriber()
 	ManagerAccess.API.ExpectedPowerShelf.RegisterPublisher()
 
+	ManagerAccess.API.ExpectedRack.RegisterSubscriber()
+
 	ManagerAccess.API.ExpectedSwitch.RegisterSubscriber()
 	ManagerAccess.API.ExpectedSwitch.RegisterPublisher()
 

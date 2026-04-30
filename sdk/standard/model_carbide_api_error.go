@@ -16,9 +16,9 @@
  */
 
 /*
-NCX Infra Controller REST API
+NVIDIA Infra Controller REST API
 
-NCX Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NCX Infra Controller datacenters, also referred to as Sites.
+NVIDIA Infra Controller REST API allows users to create and manage resources e.g. VPC, Subnets, Instances across all connected NVIDIA Infra Controller datacenters, also referred to as Sites.
 
 API version: 1.4.0
 */
@@ -34,7 +34,7 @@ import (
 // checks if the CarbideAPIError type satisfies the MappedNullable interface at compile time
 var _ MappedNullable = &CarbideAPIError{}
 
-// CarbideAPIError Describes the error response from NCX Infra Controller REST API
+// CarbideAPIError Describes the error response from NVIDIA Infra Controller REST API
 type CarbideAPIError struct {
 	// Source of the error. Only 'carbide' is supported
 	Source *string `json:"source,omitempty"`

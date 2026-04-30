@@ -78,6 +78,7 @@ type ForgeServerImpl struct {
 	em  map[string]*cwssaws.ExpectedMachine
 	eps map[string]*cwssaws.ExpectedPowerShelf
 	es  map[string]*cwssaws.ExpectedSwitch
+	er  map[string]*cwssaws.ExpectedRack
 	it  map[string]*cwssaws.InstanceType
 	des map[string]*cwssaws.DpuExtensionService
 	osi map[string]*cwssaws.OsImage
@@ -1161,6 +1162,92 @@ func (f *ForgeServerImpl) GetAllExpectedSwitchesLinked(ctx context.Context, req 
 	return &response, nil
 }
 
+// AddExpectedRack implements interface ForgeServer
+func (f *ForgeServerImpl) AddExpectedRack(ctx context.Context, req *cwssaws.ExpectedRack) (*emptypb.Empty, error) {
+	if req == nil || req.RackId == nil || req.RackId.Id == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for AddExpectedRack")
+	}
+	if req.RackProfileId == nil || req.RackProfileId.Id == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Rack Profile ID not provided for AddExpectedRack")
+	}
+	f.er[req.RackId.Id] = req
+	return &emptypb.Empty{}, nil
+}
+
+// UpdateExpectedRack implements interface ForgeServer
+func (f *ForgeServerImpl) UpdateExpectedRack(ctx context.Context, req *cwssaws.ExpectedRack) (*emptypb.Empty, error) {
+	if req == nil || req.RackId == nil || req.RackId.Id == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for UpdateExpectedRack")
+	}
+	if req.RackProfileId == nil || req.RackProfileId.Id == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Rack Profile ID not provided for UpdateExpectedRack")
+	}
+	if _, ok := f.er[req.RackId.Id]; !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedRack with ID %q not found", req.RackId.Id)
+	}
+	f.er[req.RackId.Id] = req
+	return &emptypb.Empty{}, nil
+}
+
+// DeleteExpectedRack implements interface ForgeServer
+func (f *ForgeServerImpl) DeleteExpectedRack(ctx context.Context, req *cwssaws.ExpectedRackRequest) (*emptypb.Empty, error) {
+	if req == nil || req.RackId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for DeleteExpectedRack")
+	}
+	if _, ok := f.er[req.RackId]; !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedRack with ID %q not found", req.RackId)
+	}
+	delete(f.er, req.RackId)
+	return &emptypb.Empty{}, nil
+}
+
+// GetExpectedRack implements interface ForgeServer
+func (f *ForgeServerImpl) GetExpectedRack(ctx context.Context, req *cwssaws.ExpectedRackRequest) (*cwssaws.ExpectedRack, error) {
+	if req == nil || req.RackId == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "ID not provided for GetExpectedRack")
+	}
+	er, ok := f.er[req.RackId]
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "ExpectedRack with ID %q not found", req.RackId)
+	}
+	return er, nil
+}
+
+// GetAllExpectedRacks implements interface ForgeServer
+func (f *ForgeServerImpl) GetAllExpectedRacks(ctx context.Context, req *emptypb.Empty) (*cwssaws.ExpectedRackList, error) {
+	res := make([]*cwssaws.ExpectedRack, 0, len(f.er))
+	for _, er := range f.er {
+		res = append(res, er)
+	}
+	return &cwssaws.ExpectedRackList{ExpectedRacks: res}, nil
+}
+
+// ReplaceAllExpectedRacks implements interface ForgeServer
+func (f *ForgeServerImpl) ReplaceAllExpectedRacks(ctx context.Context, req *cwssaws.ExpectedRackList) (*emptypb.Empty, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid request argument")
+	}
+	for _, er := range req.ExpectedRacks {
+		if er == nil || er.RackId == nil || er.RackId.Id == "" {
+			return nil, status.Errorf(codes.InvalidArgument, "ID not provided for ReplaceAllExpectedRacks")
+		}
+		if er.RackProfileId == nil || er.RackProfileId.Id == "" {
+			return nil, status.Errorf(codes.InvalidArgument, "Rack Profile ID not provided for ReplaceAllExpectedRacks")
+		}
+	}
+	f.er = make(map[string]*cwssaws.ExpectedRack)
+	for _, er := range req.ExpectedRacks {
+		f.er[er.RackId.Id] = er
+	}
+	return &emptypb.Empty{}, nil
+}
+
+// DeleteAllExpectedRacks implements interface ForgeServer
+func (f *ForgeServerImpl) DeleteAllExpectedRacks(ctx context.Context, req *emptypb.Empty) (*emptypb.Empty, error) {
+	f.er = make(map[string]*cwssaws.ExpectedRack)
+	return &emptypb.Empty{}, nil
+}
+
 // LoadTestMachines loads test machines into the server
 func (f *ForgeServerImpl) LoadTestMachines() {
 	nid := uuid.NewString()
@@ -1527,6 +1614,7 @@ func ForgeTest(secs int) {
 		em:  make(map[string]*cwssaws.ExpectedMachine),
 		eps: make(map[string]*cwssaws.ExpectedPowerShelf),
 		es:  make(map[string]*cwssaws.ExpectedSwitch),
+		er:  make(map[string]*cwssaws.ExpectedRack),
 	}
 	forgeServer.LoadTestMachines()
 
