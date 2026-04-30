@@ -52,6 +52,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
 	auth "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/authorization"
 	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
@@ -1320,10 +1321,7 @@ func (umh UpdateMachineHandler) Handle(c echo.Context) error {
 			TaskQueue:                queue.SiteTaskQueue,
 		}
 
-		labels := []*cwssaws.Label{}
-		for key, value := range apiRequest.Labels {
-			labels = append(labels, &cwssaws.Label{Key: key, Value: cdb.GetStrPtr(value)})
-		}
+		labels := util.ProtobufLabelsFromAPILabels(apiRequest.Labels)
 
 		machineName := machine.ID
 		if machine.Metadata != nil && machine.Metadata.Metadata != nil {
