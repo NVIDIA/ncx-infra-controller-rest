@@ -598,12 +598,15 @@ func (gemh GetExpectedMachineHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Expected Machine due to DB error", nil)
 	}
 
-	// Get Site for the Expected Machine
-	siteDAO := cdbm.NewSiteDAO(gemh.dbSession)
-	site, err := siteDAO.GetByID(ctx, nil, expectedMachine.SiteID, nil, false)
-	if err != nil {
-		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site details for Expected Machine due to DB error", nil)
+	// Site is needed for the access check; reuse if loaded via includeRelation, else fetch.
+	site := expectedMachine.Site
+	if site == nil {
+		siteDAO := cdbm.NewSiteDAO(gemh.dbSession)
+		site, err = siteDAO.GetByID(ctx, nil, expectedMachine.SiteID, nil, false)
+		if err != nil {
+			logger.Error().Err(err).Msg("error retrieving Site from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site details for Expected Machine due to DB error", nil)
+		}
 	}
 
 	// Validate ProviderTenantSite relationship and site state
