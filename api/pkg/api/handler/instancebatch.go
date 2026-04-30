@@ -80,7 +80,7 @@ func NewBatchCreateInstanceHandler(dbSession *cdb.Session, tc temporalClient.Cli
 // buildBatchInstanceCreateRequestOsConfig validates and retrieves OS configuration for batch instance creation.
 // This mirrors the behavior of CreateInstanceHandler.buildInstanceCreateRequestOsConfig.
 // Returns: osConfig, osID, and error (matching single API pattern)
-func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c echo.Context, logger *zerolog.Logger, apiRequest *model.APIBatchInstanceCreateRequest, site *cdbm.Site) (*cwssaws.OperatingSystem, *uuid.UUID, *cutil.APIError) {
+func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c echo.Context, logger *zerolog.Logger, apiRequest *model.APIBatchInstanceCreateRequest, site *cdbm.Site, tenant *cdbm.Tenant) (*cwssaws.InstanceOperatingSystemConfig, *uuid.UUID, *cutil.APIError) {
 
 	ctx := c.Request().Context()
 
@@ -92,10 +92,10 @@ func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c
 			return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "Failed to validate OperatingSystem data", err)
 		}
 
-		return &cwssaws.OperatingSystem{
+		return &cwssaws.InstanceOperatingSystemConfig{
 			RunProvisioningInstructionsOnEveryBoot: *apiRequest.AlwaysBootWithCustomIpxe, // Set by the earlier call to ValidateAndSetOperatingSystemData
 			PhoneHomeEnabled:                       *apiRequest.PhoneHomeEnabled,         // Set by the earlier call to ValidateAndSetOperatingSystemData
-			Variant: &cwssaws.OperatingSystem_Ipxe{
+			Variant: &cwssaws.InstanceOperatingSystemConfig_Ipxe{
 				Ipxe: &cwssaws.InlineIpxe{
 					IpxeScript: *apiRequest.IpxeScript,
 				},
@@ -138,8 +138,8 @@ func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c
 		return c.Str("OperatingSystem ID", os.ID.String())
 	})
 
-	// Confirm ownership between tenant and OS.
-	if os.TenantID.String() != apiRequest.TenantID {
+	// Tenant can use this OS if they created it or offered by Provider
+	if !(os.TenantID == nil || *os.TenantID == tenant.ID) {
 		logger.Error().Msg("OperatingSystem in request is not owned by tenant")
 		return nil, nil, cutil.NewAPIError(http.StatusBadRequest, "OperatingSystem specified in request is not owned by Tenant", nil)
 	}
@@ -190,28 +190,27 @@ func (bcih BatchCreateInstanceHandler) buildBatchInstanceCreateRequestOsConfig(c
 	// Options below should all have been set by the
 	// earlier call to ValidateAndSetOperatingSystemData
 
-	if os.Type == cdbm.OperatingSystemTypeIPXE {
-		return &cwssaws.OperatingSystem{
-			RunProvisioningInstructionsOnEveryBoot: *apiRequest.AlwaysBootWithCustomIpxe,
-			PhoneHomeEnabled:                       *apiRequest.PhoneHomeEnabled,
-			Variant: &cwssaws.OperatingSystem_Ipxe{
-				Ipxe: &cwssaws.InlineIpxe{
-					IpxeScript: *apiRequest.IpxeScript,
-				},
-			},
-			UserData: apiRequest.UserData,
-		}, osID, nil
-	} else {
-		return &cwssaws.OperatingSystem{
-			PhoneHomeEnabled: *apiRequest.PhoneHomeEnabled,
-			Variant: &cwssaws.OperatingSystem_OsImageId{
-				OsImageId: &cwssaws.UUID{
-					Value: os.ID.String(),
-				},
-			},
-			UserData: apiRequest.UserData,
-		}, osID, nil
+	result := cwssaws.InstanceOperatingSystemConfig{
+		PhoneHomeEnabled: *apiRequest.PhoneHomeEnabled,
+		UserData:         apiRequest.UserData,
 	}
+	switch os.Type {
+	case cdbm.OperatingSystemTypeIPXE:
+		result.RunProvisioningInstructionsOnEveryBoot = *apiRequest.AlwaysBootWithCustomIpxe
+		result.Variant = &cwssaws.InstanceOperatingSystemConfig_Ipxe{
+			Ipxe: &cwssaws.InlineIpxe{IpxeScript: *apiRequest.IpxeScript},
+		}
+	case cdbm.OperatingSystemTypeTemplatedIPXE:
+		result.RunProvisioningInstructionsOnEveryBoot = *apiRequest.AlwaysBootWithCustomIpxe
+		result.Variant = &cwssaws.InstanceOperatingSystemConfig_OperatingSystemId{
+			OperatingSystemId: &cwssaws.OperatingSystemId{Value: os.ID.String()},
+		}
+	case cdbm.OperatingSystemTypeImage:
+		result.Variant = &cwssaws.InstanceOperatingSystemConfig_OsImageId{
+			OsImageId: &cwssaws.UUID{Value: os.ID.String()},
+		}
+	}
+	return &result, osID, nil
 }
 
 // Handle godoc
@@ -365,19 +364,18 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve tenant for org", nil)
 	}
 
-	// Deprecated: tenantId in request body. Infer from org when not provided.
-	if apiRequest.TenantID == "" {
-		apiRequest.TenantID = tenant.ID.String()
-	}
-
-	apiTenant, err := common.GetTenantFromIDString(ctx, nil, apiRequest.TenantID, bcih.dbSession)
-	if err != nil {
-		logger.Warn().Err(err).Msg("error retrieving tenant from request")
-		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "TenantID in request is not valid", nil)
-	}
-	if apiTenant.ID != tenant.ID {
-		logger.Warn().Msg("tenant id in request does not match tenant in org")
-		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "TenantID in request does not match tenant in org", nil)
+	// If the caller provided an explicit tenantId in the body, validate it matches the org.
+	// TODO: tenantId as parameter is deprecated and will need to be removed by 2026-10-01.
+	if apiRequest.TenantID != "" {
+		apiTenant, terr := common.GetTenantFromIDString(ctx, nil, apiRequest.TenantID, bcih.dbSession)
+		if terr != nil {
+			logger.Warn().Err(terr).Msg("error retrieving tenant from request")
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "TenantID in request is not valid", nil)
+		}
+		if apiTenant.ID != tenant.ID {
+			logger.Warn().Msg("tenant id in request does not match tenant in org")
+			return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "TenantID in request does not match tenant in org", nil)
+		}
 	}
 
 	// Validate the instance type
@@ -838,7 +836,7 @@ func (bcih BatchCreateInstanceHandler) Handle(c echo.Context) error {
 	// apiRequest will be mutated for use in CreateFromParams.
 	// osConfig will hold the struct/data for use with Temporal/Carbide calls.
 	// Errors will be returned already in the form of cutil.NewAPIErrorResponse
-	osConfig, osID, oserr := bcih.buildBatchInstanceCreateRequestOsConfig(c, &logger, &apiRequest, site)
+	osConfig, osID, oserr := bcih.buildBatchInstanceCreateRequestOsConfig(c, &logger, &apiRequest, site, tenant)
 	if oserr != nil {
 		// buildBatchInstanceCreateRequestOsConfig already handles logging,
 		// so this is a bit redundant, but this log brings you to the

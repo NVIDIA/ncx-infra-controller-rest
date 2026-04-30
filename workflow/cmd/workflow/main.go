@@ -95,11 +95,14 @@ import (
 	networkSecurityGroupActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/networksecuritygroup"
 	networkSecurityGroupWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/networksecuritygroup"
 
-	osImageActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/operatingsystem"
-	osImageWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/operatingsystem"
+	operatingSystemActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/operatingsystem"
+	operatingSystemWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/operatingsystem"
 
 	skuActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/sku"
 	skuWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/sku"
+
+	ipxeTemplateActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/ipxetemplate"
+	ipxeTemplateWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/ipxetemplate"
 
 	vpcPrefixActivity "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/activity/vpcprefix"
 	vpcPrefixWorkflow "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/workflow/vpcprefix"
@@ -268,6 +271,9 @@ func main() {
 
 		// InfiniBandPartition workflows
 		w.RegisterWorkflow(ibpWorkflow.DeleteInfiniBandPartitionByID)
+
+		// Operating System sync workflow (REST → core push for non-image OS)
+		w.RegisterWorkflow(operatingSystemWorkflow.SynchronizeOperatingSystem)
 	} else if tcfg.Namespace == cwfn.SiteNamespace {
 		// Workflows triggered by Site Agent
 		// Machine Workflows
@@ -300,8 +306,9 @@ func main() {
 		// NetworkSecurityGroup workflow
 		w.RegisterWorkflow(networkSecurityGroupWorkflow.UpdateNetworkSecurityGroupInventory)
 
-		// OS Image workflow
-		w.RegisterWorkflow(osImageWorkflow.UpdateOsImageInventory)
+		// OperatingSystem workflows
+		w.RegisterWorkflow(operatingSystemWorkflow.UpdateOsImageInventory)
+		w.RegisterWorkflow(operatingSystemWorkflow.UpdateOperatingSystemInventory)
 
 		// VPC Prefix workflow
 		w.RegisterWorkflow(vpcPrefixWorkflow.UpdateVpcPrefixInventory)
@@ -320,6 +327,9 @@ func main() {
 
 		// SKU workflow
 		w.RegisterWorkflow(skuWorkflow.UpdateSkuInventory)
+
+		// iPXE Template workflow
+		w.RegisterWorkflow(ipxeTemplateWorkflow.UpdateIpxeTemplateInventory)
 
 		// DPU Extension Service workflow
 		w.RegisterWorkflow(dpuExtensionServiceWorkflow.UpdateDpuExtensionServiceInventory)
@@ -360,8 +370,12 @@ func main() {
 	networkSecurityGroupManager := networkSecurityGroupActivity.NewManageNetworkSecurityGroup(dbSession, siteClientPool)
 	w.RegisterActivity(&networkSecurityGroupManager)
 
-	osImageManager := osImageActivity.NewManageOsImage(dbSession, siteClientPool)
-	w.RegisterActivity(&osImageManager)
+	operatingSystemManager := operatingSystemActivity.NewManageOperatingSystem(dbSession, siteClientPool)
+	w.RegisterActivity(&operatingSystemManager)
+
+	// TODO: Combine with operatingSystemManager
+	operatingSystemPushManager := operatingSystemActivity.NewManageOperatingSystemPush(dbSession, siteClientPool)
+	w.RegisterActivity(&operatingSystemPushManager)
 
 	vpcPrefixManager := vpcPrefixActivity.NewManageVpcPrefix(dbSession, siteClientPool)
 	w.RegisterActivity(&vpcPrefixManager)
@@ -384,6 +398,10 @@ func main() {
 	// SKU activities
 	skuManager := skuActivity.NewManageSku(dbSession, siteClientPool)
 	w.RegisterActivity(&skuManager)
+
+	// iPXE Template activities
+	ipxeTemplateManager := ipxeTemplateActivity.NewManageIpxeTemplate(dbSession, siteClientPool)
+	w.RegisterActivity(&ipxeTemplateManager)
 
 	// DPU Extension Service activities
 	dpuExtensionServiceManager := dpuExtensionServiceActivity.NewManageDpuExtensionService(dbSession, siteClientPool)

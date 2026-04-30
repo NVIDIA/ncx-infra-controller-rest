@@ -1220,6 +1220,100 @@ func (c *MockForgeClient) GetAllExpectedSwitchesLinked(ctx context.Context, in *
 	return out, nil
 }
 
+/* iPXE Template mock methods */
+func (c *MockForgeClient) ListIpxeTemplates(ctx context.Context, in *wflows.ListIpxeTemplatesRequest, opts ...grpc.CallOption) (*wflows.IpxeTemplateList, error) {
+	if err, ok := ctx.Value("wantError").(error); ok {
+		return nil, err
+	}
+
+	out := &wflows.IpxeTemplateList{}
+
+	count, ok := ctx.Value("wantCount").(int)
+	if ok {
+		for i := 0; i < count; i++ {
+			out.Templates = append(out.Templates, &wflows.IpxeTemplate{
+				Name:  fmt.Sprintf("template-%d", i),
+				Scope: wflows.IpxeTemplateScope_PUBLIC,
+			})
+		}
+	}
+
+	return out, nil
+}
+
+/* OS Definition mock methods */
+func (c *MockForgeClient) FindOperatingSystemIds(ctx context.Context, in *wflows.OperatingSystemSearchFilter, opts ...grpc.CallOption) (*wflows.OperatingSystemIdList, error) {
+	if err, ok := ctx.Value("wantError").(error); ok {
+		return nil, err
+	}
+
+	out := &wflows.OperatingSystemIdList{}
+	count, ok := ctx.Value("wantCount").(int)
+	if ok {
+		for i := 0; i < count; i++ {
+			out.Ids = append(out.Ids, &wflows.OperatingSystemId{Value: uuid.New().String()})
+		}
+	}
+	return out, nil
+}
+
+func (c *MockForgeClient) FindOperatingSystemsByIds(ctx context.Context, in *wflows.OperatingSystemsByIdsRequest, opts ...grpc.CallOption) (*wflows.OperatingSystemList, error) {
+	if err, ok := ctx.Value("wantError").(error); ok {
+		return nil, err
+	}
+
+	out := &wflows.OperatingSystemList{}
+	for i, id := range in.GetIds() {
+		out.OperatingSystems = append(out.OperatingSystems, &wflows.OperatingSystem{
+			Id:                   id,
+			Name:                 fmt.Sprintf("os-definition-%d", i),
+			TenantOrganizationId: "TestOrg",
+			Type:                 wflows.OperatingSystemType_OS_TYPE_IPXE,
+		})
+	}
+	return out, nil
+}
+
+func (c *MockForgeClient) GetOperatingSystem(ctx context.Context, in *wflows.OperatingSystemId, opts ...grpc.CallOption) (*wflows.OperatingSystem, error) {
+	if err, ok := ctx.Value("wantError").(error); ok {
+		return nil, err
+	}
+	return &wflows.OperatingSystem{
+		Id:   &wflows.OperatingSystemId{Value: in.GetValue()},
+		Name: "mock-os",
+		Type: wflows.OperatingSystemType_OS_TYPE_IPXE,
+	}, nil
+}
+
+func (c *MockForgeClient) CreateOperatingSystem(ctx context.Context, in *wflows.CreateOperatingSystemRequest, opts ...grpc.CallOption) (*wflows.OperatingSystem, error) {
+	if err, ok := ctx.Value("wantError").(error); ok {
+		return nil, err
+	}
+	return &wflows.OperatingSystem{
+		Id:   in.GetId(),
+		Name: in.GetName(),
+		Type: wflows.OperatingSystemType_OS_TYPE_IPXE,
+	}, nil
+}
+
+func (c *MockForgeClient) UpdateOperatingSystem(ctx context.Context, in *wflows.UpdateOperatingSystemRequest, opts ...grpc.CallOption) (*wflows.OperatingSystem, error) {
+	if err, ok := ctx.Value("wantError").(error); ok {
+		return nil, err
+	}
+	return &wflows.OperatingSystem{
+		Id:   in.GetId(),
+		Name: in.GetName(),
+		Type: wflows.OperatingSystemType_OS_TYPE_IPXE,
+	}, nil
+}
+
+func (c *MockForgeClient) DeleteOperatingSystem(ctx context.Context, in *wflows.DeleteOperatingSystemRequest, opts ...grpc.CallOption) (*wflows.DeleteOperatingSystemResponse, error) {
+	if err, ok := ctx.Value("wantError").(error); ok {
+		return nil, err
+	}
+	return &wflows.DeleteOperatingSystemResponse{}, nil
+}
+
 /* SKU mock methods */
 func (c *MockForgeClient) FindSkusByIds(ctx context.Context, in *wflows.SkusByIdsRequest, opts ...grpc.CallOption) (*wflows.SkuList, error) {
 	err, ok := ctx.Value("wantError").(error)

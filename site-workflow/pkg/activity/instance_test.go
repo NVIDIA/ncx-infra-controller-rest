@@ -76,9 +76,9 @@ func TestManageInstance_UpdateInstanceConfigOnSite(t *testing.T) {
 						},
 					},
 					Config: &cwssaws.InstanceConfig{
-						Os: &cwssaws.OperatingSystem{
+						Os: &cwssaws.InstanceOperatingSystemConfig{
 							RunProvisioningInstructionsOnEveryBoot: true,
-							Variant: &cwssaws.OperatingSystem_Ipxe{
+							Variant: &cwssaws.InstanceOperatingSystemConfig_Ipxe{
 								Ipxe: &cwssaws.InlineIpxe{
 									IpxeScript: ipxeScript,
 								},
@@ -149,9 +149,9 @@ func TestManageInstance_CreateInstanceOnSiteOnSite(t *testing.T) {
 						},
 					},
 					Config: &cwssaws.InstanceConfig{
-						Os: &cwssaws.OperatingSystem{
+						Os: &cwssaws.InstanceOperatingSystemConfig{
 							RunProvisioningInstructionsOnEveryBoot: true,
-							Variant: &cwssaws.OperatingSystem_Ipxe{
+							Variant: &cwssaws.InstanceOperatingSystemConfig_Ipxe{
 								Ipxe: &cwssaws.InlineIpxe{
 									IpxeScript: ipxeScript,
 								},
@@ -230,9 +230,9 @@ func TestManageInstance_CreateInstancesOnSite(t *testing.T) {
 								},
 							},
 							Config: &cwssaws.InstanceConfig{
-								Os: &cwssaws.OperatingSystem{
+								Os: &cwssaws.InstanceOperatingSystemConfig{
 									RunProvisioningInstructionsOnEveryBoot: true,
-									Variant: &cwssaws.OperatingSystem_Ipxe{
+									Variant: &cwssaws.InstanceOperatingSystemConfig_Ipxe{
 										Ipxe: &cwssaws.InlineIpxe{
 											IpxeScript: ipxeScript,
 										},
@@ -254,9 +254,9 @@ func TestManageInstance_CreateInstancesOnSite(t *testing.T) {
 								},
 							},
 							Config: &cwssaws.InstanceConfig{
-								Os: &cwssaws.OperatingSystem{
+								Os: &cwssaws.InstanceOperatingSystemConfig{
 									RunProvisioningInstructionsOnEveryBoot: true,
-									Variant: &cwssaws.OperatingSystem_Ipxe{
+									Variant: &cwssaws.InstanceOperatingSystemConfig_Ipxe{
 										Ipxe: &cwssaws.InlineIpxe{
 											IpxeScript: ipxeScript,
 										},

@@ -288,8 +288,11 @@ func TestInitElektra(t *testing.T) {
 	if testElektra != nil {
 		return
 	}
-	os.Setenv("CARBIDE_CERT_CHECK_INTERVAL", "1") // set this to check if certs were rotated every second to help with unit tests
-	defer os.Unsetenv("CARBIDE_CERT_CHECK_INTERVAL")
+	// Keep CARBIDE_CERT_CHECK_INTERVAL set for the lifetime of the test binary so that
+	// the cert-reload goroutine (started inside api.Start below) reads the 1-second
+	// interval before the ticker is created. Unsetting it via defer races against
+	// goroutine scheduling and causes the goroutine to fall back to the 15-minute default.
+	os.Setenv("CARBIDE_CERT_CHECK_INTERVAL", "1")
 
 	// Initialize test Site Agent
 	log.Info().Msg("Elektra: Initializing test Site Agent")

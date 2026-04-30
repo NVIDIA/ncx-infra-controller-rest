@@ -43,13 +43,17 @@ CreateOperatingSystem Create Operating System
 
 Create an Operating System for the org.
 
-Either `infrastructureProviderId` or `tenantId` must be provided in request data. Both cannot be provided at the same time.
+Either `infrastructureProviderId` or `tenantId` must be provided in request data. Both cannot be provided at the same time. For iPXE template-based OS definitions, Provider Admin may omit `tenantId` and have ownership resolved automatically.
 
 If `infrastructureProviderId` is provided in request data, then org must have an Infrastructure Provider entity and its ID should match the query param value. User must have `FORGE_PROVIDER_ADMIN` role.
 
 If `tenantId` is provided in request data, then org must have a Tenant entity and its ID should match the query param value. User must have `FORGE_TENANT_ADMIN` role.
 
-Only Tenants are allowed to create Operating System for MVP.
+Tenants can create iPXE script-based or Image-based Operating Systems. Provider Admins can create iPXE template-based Operating Systems (using `ipxeTemplateId`).
+
+`ipxeScript`, `ipxeTemplateId`, and `imageUrl` are mutually exclusive — only one may be specified. When `ipxeTemplateId` is used, `ipxeTemplateParameters` and `ipxeTemplateArtifacts` can be provided to configure the template.
+
+The `scope` field is required for Templated iPXE OSes and controls synchronization direction: `Global` (rest-to-core for all sites) or `Limited` (rest-to-core for sites in `siteIds`). `Local` scope cannot be specified at creation — Local Operating Systems originate in carbide-core and are synced to rest via inventory. Must not be specified for other OS types.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org
@@ -632,6 +636,8 @@ UpdateOperatingSystem Update Operating System
 If the Operating System has `infrastructureProviderId` set, then org must have an Infrastructure Provider entity and its ID should match the Operating System Infrastructure Provider ID. User must have `FORGE_PROVIDER_ADMIN` authorization role. Provider must own the Operating System.
 
 If the Operating System has `tenantId` set, then org must have a Tenant entity and its ID should match the Operating System Tenant ID. User must have `FORGE_TENANT_ADMIN` role. Tenant must own the Operating System.
+
+The `type` and `scope` of an Operating System cannot be changed after creation.
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param org Name of the Org

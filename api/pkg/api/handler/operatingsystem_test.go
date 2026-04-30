@@ -99,7 +99,7 @@ func TestOperatingSystemHandler_Create(t *testing.T) {
 	cfg := common.GetTestConfig()
 	tempClient := &tmocks.Client{}
 
-	osObj := model.APIOperatingSystemCreateRequest{Name: "test-operating-system-1", Description: cdb.GetStrPtr("test"), InfrastructureProviderID: nil, TenantID: cdb.GetStrPtr(tenant1.ID.String()), IpxeScript: cdb.GetStrPtr("ipxe"), ImageDisk: cdb.GetStrPtr("/dev/sda"), UserData: cdb.GetStrPtr(cdmu.TestCommonCloudInit), IsCloudInit: true, AllowOverride: false}
+	osObj := model.APIOperatingSystemCreateRequest{Name: "test-operating-system-1", Description: cdb.GetStrPtr("test"), InfrastructureProviderID: nil, TenantID: cdb.GetStrPtr(tenant1.ID.String()), IpxeScript: cdb.GetStrPtr("ipxe"), UserData: cdb.GetStrPtr(cdmu.TestCommonCloudInit), IsCloudInit: true, AllowOverride: false}
 	okBody, err := json.Marshal(osObj)
 	assert.Nil(t, err)
 
@@ -156,8 +156,8 @@ func TestOperatingSystemHandler_Create(t *testing.T) {
 	wrun.Mock.On("Get", mock.Anything, mock.Anything).Return(nil)
 
 	tempClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
-		mock.AnythingOfType("func(internal.Context, uuid.UUID, uuid.UUID) error"), mock.AnythingOfType("uuid.UUID"),
-		mock.AnythingOfType("uuid.UUID")).Return(wrun, nil)
+		mock.AnythingOfType("func(internal.Context, uuid.UUID, string) error"), mock.AnythingOfType("uuid.UUID"),
+		mock.AnythingOfType("string")).Return(wrun, nil)
 
 	tsc.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
 		"CreateOsImage", mock.Anything).Return(wrun, nil)
@@ -298,7 +298,7 @@ func TestOperatingSystemHandler_Create(t *testing.T) {
 			user:                          tnu,
 			expectedErr:                   false,
 			expectedStatus:                http.StatusCreated,
-			expectedOperatingSystemStatus: cdbm.OperatingSystemStatusReady,
+			expectedOperatingSystemStatus: cdbm.OperatingSystemStatusSyncing,
 			expectedStatusHistoryCount:    1,
 			verifyChildSpanner:            true,
 		},
@@ -1552,8 +1552,8 @@ func TestOperatingSystemHandler_Update(t *testing.T) {
 	wrun.Mock.On("Get", mock.Anything, mock.Anything).Return(nil)
 
 	tempClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
-		mock.AnythingOfType("func(internal.Context, uuid.UUID, uuid.UUID) error"), mock.AnythingOfType("uuid.UUID"),
-		mock.AnythingOfType("uuid.UUID")).Return(wrun, nil)
+		mock.AnythingOfType("func(internal.Context, uuid.UUID, string) error"), mock.AnythingOfType("uuid.UUID"),
+		mock.AnythingOfType("string")).Return(wrun, nil)
 
 	tsc.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
 		"UpdateOsImage", mock.Anything).Return(wrun, nil)
@@ -1629,7 +1629,7 @@ func TestOperatingSystemHandler_Update(t *testing.T) {
 			user:           user,
 			osID:           os2.ID.String(),
 			expectedErr:    true,
-			expectedStatus: http.StatusBadRequest,
+			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:           "error when req body doesnt bind",
@@ -1697,32 +1697,22 @@ func TestOperatingSystemHandler_Update(t *testing.T) {
 			verifyChildSpanner:       true,
 		},
 		{
-			name:           "should succeed to deactivate active OS",
+			name:           "should reject deactivate on Image OS",
 			reqOrgName:     ipOrg1,
 			user:           user,
 			reqBody:        string(okBodyDeactivate),
 			osID:           os10.ID.String(),
-			expectedErr:    false,
-			expectedStatus: http.StatusOK,
-
-			expectedName:             updReqDeactivate.Name,
-			expectedDesc:             updReqDeactivate.Description,
-			expectedIsActive:         cdb.GetBoolPtr(false),
-			expectedDeactivationNote: updReqDeactivate.DeactivationNote,
+			expectedErr:    true,
+			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "should succeed to deactivate active OS without Deactivation Note",
+			name:           "should reject deactivate on Image OS without Deactivation Note",
 			reqOrgName:     ipOrg1,
 			user:           user,
 			reqBody:        string(okBodyDeactivateNoNote),
 			osID:           os11.ID.String(),
-			expectedErr:    false,
-			expectedStatus: http.StatusOK,
-
-			expectedName:             updReqDeactivateNoNote.Name,
-			expectedDesc:             updReqDeactivateNoNote.Description,
-			expectedIsActive:         cdb.GetBoolPtr(false),
-			expectedDeactivationNote: updReqDeactivateNoNote.DeactivationNote,
+			expectedErr:    true,
+			expectedStatus: http.StatusBadRequest,
 		},
 		{
 			name:           "should fail to change Deactivation Note for an active OS",
@@ -1734,53 +1724,42 @@ func TestOperatingSystemHandler_Update(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "should succeed to change Deactivation Note on deactivated OS",
+			name:           "should reject change of Deactivation Note on deactivated Image OS",
 			reqOrgName:     ipOrg1,
 			user:           user,
 			reqBody:        string(okBodyChangeNote),
 			osID:           os12.ID.String(),
-			expectedErr:    false,
-			expectedStatus: http.StatusOK,
-
-			expectedName:             updReqChangeNote.Name,
-			expectedDesc:             updReqChangeNote.Description,
-			expectedIsActive:         cdb.GetBoolPtr(false),
-			expectedDeactivationNote: updReqChangeNote.DeactivationNote,
+			expectedErr:    true,
+			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "should succeed to activate deactivated OS (3/4)",
+			name:           "should reject activate on deactivated Image OS",
 			reqOrgName:     ipOrg1,
 			user:           user,
 			reqBody:        string(okBodyActivate),
 			osID:           os13.ID.String(),
-			expectedErr:    false,
-			expectedStatus: http.StatusOK,
-
-			expectedName:             updReqActivate.Name,
-			expectedDesc:             updReqActivate.Description,
-			expectedIsActive:         cdb.GetBoolPtr(false),
-			expectedDeactivationNote: nil,
+			expectedErr:    true,
+			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:             "success when updated with required valid imageURL attribute",
-			reqOrgName:       ipOrg1,
-			user:             user,
-			reqBody:          string(okBodyImageUrl),
-			reqUpdateModel:   &updReqImageUrl,
-			osID:             os5.ID.String(),
-			expectedErr:      false,
-			expectedStatus:   http.StatusOK,
-			expectedImageURL: cdb.GetStrPtr("http://newimagepath.iso"),
+			name:           "should reject imageURL update on Image OS",
+			reqOrgName:     ipOrg1,
+			user:           user,
+			reqBody:        string(okBodyImageUrl),
+			reqUpdateModel: &updReqImageUrl,
+			osID:           os5.ID.String(),
+			expectedErr:    true,
+			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "error when updated with required valid imageURL attribute failed with context deadline error",
+			name:           "should reject imageURL update on Image OS in second org",
 			reqOrgName:     ipOrg2,
 			user:           user,
 			reqBody:        string(okBodyImageUrl),
 			reqUpdateModel: &updReqImageUrl,
 			osID:           os9.ID.String(),
 			expectedErr:    true,
-			expectedStatus: http.StatusInternalServerError,
+			expectedStatus: http.StatusBadRequest,
 		},
 	}
 	for _, tc := range tests {
@@ -2085,8 +2064,8 @@ func TestOperatingSystemHandler_Delete(t *testing.T) {
 	wrun.Mock.On("Get", mock.Anything, mock.Anything).Return(nil)
 
 	tempClient.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
-		mock.AnythingOfType("func(internal.Context, uuid.UUID, uuid.UUID) error"), mock.AnythingOfType("uuid.UUID"),
-		mock.AnythingOfType("uuid.UUID")).Return(wrun, nil)
+		mock.AnythingOfType("func(internal.Context, uuid.UUID, string) error"), mock.AnythingOfType("uuid.UUID"),
+		mock.AnythingOfType("string")).Return(wrun, nil)
 
 	tsc.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
 		"DeleteOsImage", mock.Anything).Return(wrun, nil)
@@ -2175,7 +2154,7 @@ func TestOperatingSystemHandler_Delete(t *testing.T) {
 			user:           tnu,
 			osID:           os3.ID.String(),
 			expectedErr:    true,
-			expectedStatus: http.StatusBadRequest,
+			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:           "error when instance present for os",
