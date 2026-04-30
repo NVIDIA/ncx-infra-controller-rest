@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # NVIDIA Bare Metal REST OpenAPI Schema
 
-This repo contains OpenAPI schema for NVIDIA Bare Metal REST endpoints. Redoc rendered latest version can be viewed at https://nvidia.github.io/ncx-infra-controller-rest/
+This repo contains OpenAPI schema for NVIDIA Bare Metal REST endpoints. Redoc rendered latest version can be viewed at https://nvidia.github.io/infra-controller-rest/
 
 # Development
 

@@ -11,7 +11,7 @@ In deployments, NCX Infra Controller REST requires [NCX Infra Controller Core](h
 
 The REST layer can be deployed in the datacenter with NCX Infra Controller Core, or deployed anywhere in Cloud and allow Site Agent to connect from the datacenter. Multiple NCX Infra Controller Cores running in different datacenters can also connect to NCX Infra Controller REST through respective Site Agents.
 
-View latest OpenAPI schema on [GitHub pages](https://nvidia.github.io/ncx-infra-controller-rest/).
+View latest OpenAPI schema on [GitHub pages](https://nvidia.github.io/infra-controller-rest/).
 
 ## Prerequisites
 
@@ -109,7 +109,7 @@ cd ../ncx-infra-controller-core/helm-prereqs
 ./setup.sh -y     # or ./setup.sh for interactive prompts
 ```
 
-The setup script auto-detects this repo from the sibling path `ncx-infra-controller-rest`. Set `NCX_REPO=/path/to/this/repo` to override.
+The setup script auto-detects this repo from the sibling path `infra-controller-rest`. Set `NCX_REPO=/path/to/this/repo` to override.
 
 To tear everything down:
 ```bash
@@ -221,7 +221,7 @@ az acr login --name myregistry
 2. Build and push:
 
 ```bash
-REGISTRY=my-registry.example.com/ncx-infra-controller-rest
+REGISTRY=my-registry.example.com/infra-controller-rest
 TAG=v1.0.0
 
 make docker-build IMAGE_REGISTRY=$REGISTRY IMAGE_TAG=$TAG
