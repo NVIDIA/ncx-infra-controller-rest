@@ -54,6 +54,9 @@ func expectedSwitchToProto(es *cdbm.ExpectedSwitch, defaultBmcUsername, defaultB
 		SwitchSerialNumber: es.SwitchSerialNumber,
 	}
 
+	if es.BmcIpAddress != nil {
+		proto.BmcIpAddress = *es.BmcIpAddress
+	}
 	if es.RackID != nil {
 		proto.RackId = &cwssaws.RackId{Id: *es.RackID}
 	}
@@ -236,6 +239,7 @@ func (cesh CreateExpectedSwitchHandler) Handle(c echo.Context) error {
 			ExpectedSwitchID:   uuid.New(),
 			SiteID:             site.ID,
 			BmcMacAddress:      apiRequest.BmcMacAddress,
+			BmcIpAddress:       apiRequest.BmcIpAddress,
 			SwitchSerialNumber: apiRequest.SwitchSerialNumber,
 			RackID:             apiRequest.RackID,
 			Name:               apiRequest.Name,
@@ -697,6 +701,7 @@ func (uesh UpdateExpectedSwitchHandler) Handle(c echo.Context) error {
 		cdbm.ExpectedSwitchUpdateInput{
 			ExpectedSwitchID:   expectedSwitch.ID,
 			BmcMacAddress:      apiRequest.BmcMacAddress,
+			BmcIpAddress:       apiRequest.BmcIpAddress,
 			SwitchSerialNumber: apiRequest.SwitchSerialNumber,
 			RackID:             apiRequest.RackID,
 			Name:               apiRequest.Name,

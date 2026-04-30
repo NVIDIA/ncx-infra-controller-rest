@@ -54,8 +54,8 @@ func expectedPowerShelfToProto(eps *cdbm.ExpectedPowerShelf, defaultBmcUsername,
 		ShelfSerialNumber:    eps.ShelfSerialNumber,
 	}
 
-	if eps.IpAddress != nil {
-		proto.BmcIpAddress = *eps.IpAddress
+	if eps.BmcIpAddress != nil {
+		proto.BmcIpAddress = *eps.BmcIpAddress
 	}
 	if eps.RackID != nil {
 		proto.RackId = &cwssaws.RackId{Id: *eps.RackID}
@@ -234,7 +234,7 @@ func (cepsh CreateExpectedPowerShelfHandler) Handle(c echo.Context) error {
 			SiteID:               site.ID,
 			BmcMacAddress:        apiRequest.BmcMacAddress,
 			ShelfSerialNumber:    apiRequest.ShelfSerialNumber,
-			IpAddress:            apiRequest.IpAddress,
+			BmcIpAddress:         apiRequest.BmcIpAddress,
 			RackID:               apiRequest.RackID,
 			Name:                 apiRequest.Name,
 			Manufacturer:         apiRequest.Manufacturer,
@@ -694,7 +694,7 @@ func (uepsh UpdateExpectedPowerShelfHandler) Handle(c echo.Context) error {
 			ExpectedPowerShelfID: expectedPowerShelf.ID,
 			BmcMacAddress:        apiRequest.BmcMacAddress,
 			ShelfSerialNumber:    apiRequest.ShelfSerialNumber,
-			IpAddress:            apiRequest.IpAddress,
+			BmcIpAddress:         apiRequest.BmcIpAddress,
 			RackID:               apiRequest.RackID,
 			Name:                 apiRequest.Name,
 			Manufacturer:         apiRequest.Manufacturer,

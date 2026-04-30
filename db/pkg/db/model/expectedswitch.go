@@ -62,6 +62,7 @@ type ExpectedSwitch struct {
 	Site               *Site             `bun:"rel:belongs-to,join:site_id=id"`
 	BmcMacAddress      string            `bun:"bmc_mac_address,notnull"`
 	SwitchSerialNumber string            `bun:"switch_serial_number,notnull"`
+	BmcIpAddress       *string           `bun:"bmc_ip_address"`
 	RackID             *string           `bun:"rack_id"`
 	Name               *string           `bun:"name"`
 	Manufacturer       *string           `bun:"manufacturer"`
@@ -83,6 +84,7 @@ type ExpectedSwitchCreateInput struct {
 	SiteID             uuid.UUID
 	BmcMacAddress      string
 	SwitchSerialNumber string
+	BmcIpAddress       *string
 	RackID             *string
 	Name               *string
 	Manufacturer       *string
@@ -101,6 +103,7 @@ type ExpectedSwitchUpdateInput struct {
 	ExpectedSwitchID   uuid.UUID
 	BmcMacAddress      *string
 	SwitchSerialNumber *string
+	BmcIpAddress       *string
 	RackID             *string
 	Name               *string
 	Manufacturer       *string
@@ -116,6 +119,7 @@ type ExpectedSwitchUpdateInput struct {
 // ExpectedSwitchClearInput input parameters for Clear method
 type ExpectedSwitchClearInput struct {
 	ExpectedSwitchID uuid.UUID
+	BmcIpAddress     bool
 	RackID           bool
 	Name             bool
 	Manufacturer     bool
@@ -200,6 +204,7 @@ func (essd ExpectedSwitchSQLDAO) Create(ctx context.Context, tx *db.Tx, input Ex
 		SiteID:             input.SiteID,
 		BmcMacAddress:      input.BmcMacAddress,
 		SwitchSerialNumber: input.SwitchSerialNumber,
+		BmcIpAddress:       input.BmcIpAddress,
 		RackID:             input.RackID,
 		Name:               input.Name,
 		Manufacturer:       input.Manufacturer,
@@ -391,6 +396,10 @@ func (essd ExpectedSwitchSQLDAO) Update(ctx context.Context, tx *db.Tx, input Ex
 		es.SwitchSerialNumber = *input.SwitchSerialNumber
 		columnsSet["switch_serial_number"] = true
 	}
+	if input.BmcIpAddress != nil {
+		es.BmcIpAddress = input.BmcIpAddress
+		columnsSet["bmc_ip_address"] = true
+	}
 	if input.RackID != nil {
 		es.RackID = input.RackID
 		columnsSet["rack_id"] = true
@@ -477,6 +486,10 @@ func (essd ExpectedSwitchSQLDAO) Clear(ctx context.Context, tx *db.Tx, input Exp
 	}
 
 	updatedFields := []string{}
+	if input.BmcIpAddress {
+		es.BmcIpAddress = nil
+		updatedFields = append(updatedFields, "bmc_ip_address")
+	}
 	if input.RackID {
 		es.RackID = nil
 		updatedFields = append(updatedFields, "rack_id")
