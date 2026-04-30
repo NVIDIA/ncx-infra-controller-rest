@@ -197,8 +197,8 @@ func (cemh CreateExpectedMachineHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site is not in Registered state, cannot perform operation", nil)
 	}
 
-	// Check for duplicate MAC address
-	// Notes: We do not allow multiple Expected Machines with the same MAC address, but it's not a DB unique constraint so we check here
+	// Check for duplicate MAC address. The DB enforces UNIQUE (bmc_mac_address, site_id),
+	// but we pre-check here so we can return the conflicting record's ID in the response.
 	emDAO := cdbm.NewExpectedMachineDAO(cemh.dbSession)
 	ems, count, err := emDAO.GetAll(ctx, nil, cdbm.ExpectedMachineFilterInput{
 		BmcMacAddresses: []string{apiRequest.BmcMacAddress},

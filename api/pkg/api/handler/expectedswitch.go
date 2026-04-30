@@ -134,8 +134,8 @@ func (cesh CreateExpectedSwitchHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site is not in Registered state, cannot perform operation", nil)
 	}
 
-	// Check for duplicate MAC address
-	// Notes: We do not allow multiple Expected Switches with the same MAC address, but it's not a DB unique constraint so we check here
+	// Check for duplicate MAC address. The DB enforces UNIQUE (bmc_mac_address, site_id),
+	// but we pre-check here so we can return the conflicting record's ID in the response.
 	esDAO := cdbm.NewExpectedSwitchDAO(cesh.dbSession)
 	ess, count, err := esDAO.GetAll(ctx, nil, cdbm.ExpectedSwitchFilterInput{
 		BmcMacAddresses: []string{apiRequest.BmcMacAddress},
