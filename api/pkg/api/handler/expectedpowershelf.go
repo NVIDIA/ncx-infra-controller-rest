@@ -534,12 +534,15 @@ func (gepsh GetExpectedPowerShelfHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Expected Power Shelf due to DB error", nil)
 	}
 
-	// Get Site for the Expected Power Shelf
-	siteDAO := cdbm.NewSiteDAO(gepsh.dbSession)
-	site, err := siteDAO.GetByID(ctx, nil, expectedPowerShelf.SiteID, nil, false)
-	if err != nil {
-		logger.Error().Err(err).Msg("error retrieving Site from DB")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site details for Expected Power Shelf due to DB error", nil)
+	// Site is needed for the access check; reuse if loaded via includeRelation, else fetch.
+	site := expectedPowerShelf.Site
+	if site == nil {
+		siteDAO := cdbm.NewSiteDAO(gepsh.dbSession)
+		site, err = siteDAO.GetByID(ctx, nil, expectedPowerShelf.SiteID, nil, false)
+		if err != nil {
+			logger.Error().Err(err).Msg("error retrieving Site from DB")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Site details for Expected Power Shelf due to DB error", nil)
+		}
 	}
 
 	// Validate ProviderTenantSite relationship and site state
