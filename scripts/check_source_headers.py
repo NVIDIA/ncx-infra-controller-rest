@@ -50,7 +50,7 @@ BLOCK_COMMENT_EXTENSIONS = {
     ".ts",
     ".tsx",
 }
-HASH_COMMENT_EXTENSIONS = {".py", ".sh", ".bash", ".zsh"}
+HASH_COMMENT_EXTENSIONS = {".py", ".sh", ".bash", ".zsh", ".yml", ".yaml"}
 EXCLUDED_DIRS = {
     ".git",
     ".cache",
