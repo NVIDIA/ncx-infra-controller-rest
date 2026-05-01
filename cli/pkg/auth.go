@@ -112,7 +112,12 @@ func LoginCommand() *cli.Command {
 				return nil
 			}
 			if HasOIDCConfig(cfg) {
-				return loginWithOIDCCmd(c, cfg)
+				_, err := LoginWithOIDCConfig(cfg, ConfigPath())
+				if err != nil {
+					return err
+				}
+				fmt.Fprintf(os.Stderr, "Login successful. Token saved to %s\n", ConfigPath())
+				return nil
 			}
 			if cfg.Auth.APIKey != nil && cfg.Auth.APIKey.Key != "" {
 				if cfg.Auth.APIKey.AuthnURL == "" {

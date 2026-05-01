@@ -23,6 +23,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -79,16 +80,24 @@ func TestExtractNGCToken(t *testing.T) {
 func TestLoginWithTokenCommandSavesTokenAndCommand(t *testing.T) {
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, "config.yaml")
+	markerPath := filepath.Join(dir, "script-ran")
+	scriptPath := filepath.Join(dir, "token.sh")
+	script := "#!/bin/sh\n" +
+		"printf ran > " + strconv.Quote(markerPath) + "\n" +
+		"printf script-token\n"
+	require.NoError(t, os.WriteFile(scriptPath, []byte(script), 0600))
 	cfg := &ConfigFile{}
+	tokenCommand := "sh " + strconv.Quote(scriptPath)
 
-	token, err := LoginWithTokenCommand(cfg, configPath, "printf script-token")
+	token, err := LoginWithTokenCommand(cfg, configPath, tokenCommand)
 	require.NoError(t, err)
 	require.Equal(t, "script-token", token)
+	require.FileExists(t, markerPath)
 
 	loaded, err := LoadConfigFromPath(configPath)
 	require.NoError(t, err)
 	require.Equal(t, "script-token", loaded.Auth.Token)
-	require.Equal(t, "printf script-token", loaded.Auth.TokenCommand)
+	require.Equal(t, tokenCommand, loaded.Auth.TokenCommand)
 }
 
 func TestLoginWithTokenCommandRejectsEmptyOutput(t *testing.T) {
@@ -195,6 +204,44 @@ func TestLoginCommandExplicitAPIKeyWinsOverOIDCFlags(t *testing.T) {
 	loaded, err := LoadConfigFromPath(configPath)
 	require.NoError(t, err)
 	require.Equal(t, "api-token", loaded.Auth.APIKey.Token)
+}
+
+func TestLoginCommandConfiguredOIDCUsesRefreshToken(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.NoError(t, r.ParseForm())
+		require.Equal(t, "refresh_token", r.Form.Get("grant_type"))
+		require.Equal(t, "stored-refresh", r.Form.Get("refresh_token"))
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"access_token":"refreshed-token","refresh_token":"new-refresh","expires_in":3600}`))
+	}))
+	defer server.Close()
+
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	cfg := &ConfigFile{
+		Auth: ConfigAuth{
+			OIDC: &ConfigOIDC{
+				TokenURL:     server.URL,
+				ClientID:     "client-id",
+				RefreshToken: "stored-refresh",
+			},
+		},
+	}
+	require.NoError(t, SaveConfigToPath(cfg, configPath))
+	SetConfigPath(configPath)
+	defer SetConfigPath("")
+
+	flags := flag.NewFlagSet("login", flag.ContinueOnError)
+	for _, name := range []string{"api-key", "authn-url", "token-url", "keycloak-url", "keycloak-realm", "client-id", "client-secret", "username", "password", "token-command"} {
+		flags.String(name, "", "")
+	}
+
+	ctx := cli.NewContext(cli.NewApp(), flags, nil)
+	require.NoError(t, LoginCommand().Action(ctx))
+
+	loaded, err := LoadConfigFromPath(configPath)
+	require.NoError(t, err)
+	require.Equal(t, "refreshed-token", loaded.Auth.OIDC.Token)
+	require.Equal(t, "new-refresh", loaded.Auth.OIDC.RefreshToken)
 }
 
 func TestLoginCommandExplicitAPIKeyRequiresAuthnURL(t *testing.T) {
