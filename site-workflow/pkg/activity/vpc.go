@@ -142,7 +142,7 @@ func vpcPagedInventory(allItemIDs []*cwssaws.VpcId, pagedItems []*cwssaws.Vpc, i
 }
 
 // Function to create VPCS with Carbide
-func (mv *ManageVPC) CreateVpcOnSite(ctx context.Context, request *cwssaws.VpcCreationRequest) error {
+func (mv *ManageVPC) CreateVpcOnSite(ctx context.Context, request *cwssaws.VpcCreationRequest) (*cwssaws.Vpc, error) {
 	logger := log.With().Str("Activity", "CreateVpcOnSite").Logger()
 
 	logger.Info().Msg("Starting activity")
@@ -164,24 +164,24 @@ func (mv *ManageVPC) CreateVpcOnSite(ctx context.Context, request *cwssaws.VpcCr
 	}
 
 	if err != nil {
-		return temporal.NewNonRetryableApplicationError(err.Error(), swe.ErrTypeInvalidRequest, err)
+		return nil, temporal.NewNonRetryableApplicationError(err.Error(), swe.ErrTypeInvalidRequest, err)
 	}
 
 	// Call Site Controller gRPC endpoint
 	forgeClient, err := mv.CarbideAtomicClient.GetForgeClient()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = forgeClient.CreateVpc(ctx, request)
+	controllerVpc, err := forgeClient.CreateVpc(ctx, request)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to create VPC using Site Controller API")
-		return swe.WrapErr(err)
+		return nil, swe.WrapErr(err)
 	}
 
 	logger.Info().Msg("Completed activity")
 
-	return nil
+	return controllerVpc, nil
 }
 
 // Function to update VPCS with Carbide

@@ -33,7 +33,6 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
-	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
 	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
 	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
@@ -91,62 +90,6 @@ func ValidateProviderOrTenantSiteAccess(ctx context.Context, logger zerolog.Logg
 	}
 
 	return hasAccess, nil
-}
-
-// expectedMachineToProto builds the workflow proto. BMC credentials and
-// labels are passed separately because they may come from the API request
-// rather than the DB record (BMC credentials aren't persisted at all).
-func expectedMachineToProto(em *cdbm.ExpectedMachine, defaultBmcUsername, defaultBmcPassword *string, labels map[string]string) *cwssaws.ExpectedMachine {
-	proto := &cwssaws.ExpectedMachine{
-		Id:                       &cwssaws.UUID{Value: em.ID.String()},
-		BmcMacAddress:            em.BmcMacAddress,
-		ChassisSerialNumber:      em.ChassisSerialNumber,
-		FallbackDpuSerialNumbers: em.FallbackDpuSerialNumbers,
-		SkuId:                    em.SkuID,
-	}
-
-	if em.RackID != nil {
-		proto.RackId = &cwssaws.RackId{Id: *em.RackID}
-	}
-	if em.Name != nil {
-		proto.Name = em.Name
-	}
-	if em.Manufacturer != nil {
-		proto.Manufacturer = em.Manufacturer
-	}
-	if em.Model != nil {
-		proto.Model = em.Model
-	}
-	if em.Description != nil {
-		proto.Description = em.Description
-	}
-	if em.FirmwareVersion != nil {
-		proto.FirmwareVersion = em.FirmwareVersion
-	}
-	if em.SlotID != nil {
-		proto.SlotId = em.SlotID
-	}
-	if em.TrayIdx != nil {
-		proto.TrayIdx = em.TrayIdx
-	}
-	if em.HostID != nil {
-		proto.HostId = em.HostID
-	}
-
-	if defaultBmcUsername != nil {
-		proto.BmcUsername = *defaultBmcUsername
-	}
-	if defaultBmcPassword != nil {
-		proto.BmcPassword = *defaultBmcPassword
-	}
-
-	if protoLabels := util.ProtobufLabelsFromAPILabels(labels); protoLabels != nil {
-		proto.Metadata = &cwssaws.Metadata{
-			Labels: protoLabels,
-		}
-	}
-
-	return proto
 }
 
 // ~~~~~ Create Handler ~~~~~ //
@@ -316,12 +259,10 @@ func (cemh CreateExpectedMachineHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Expected Machine due to DB error", nil)
 	}
 
-	createExpectedMachineRequest := expectedMachineToProto(
-		expectedMachine,
-		apiRequest.DefaultBmcUsername,
-		apiRequest.DefaultBmcPassword,
-		apiRequest.Labels,
-	)
+	createExpectedMachineRequest := expectedMachine.ToProto(cdbm.ExpectedMachineCredentials{
+		Username: apiRequest.DefaultBmcUsername,
+		Password: apiRequest.DefaultBmcPassword,
+	})
 
 	logger.Info().Msg("triggering Expected Machine create workflow on Site")
 
@@ -790,12 +731,10 @@ func (uemh UpdateExpectedMachineHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Expected Machine due to DB error", nil)
 	}
 
-	updateExpectedMachineRequest := expectedMachineToProto(
-		updatedExpectedMachine,
-		apiRequest.DefaultBmcUsername,
-		apiRequest.DefaultBmcPassword,
-		apiRequest.Labels,
-	)
+	updateExpectedMachineRequest := updatedExpectedMachine.ToProto(cdbm.ExpectedMachineCredentials{
+		Username: apiRequest.DefaultBmcUsername,
+		Password: apiRequest.DefaultBmcPassword,
+	})
 
 	logger.Info().Msg("triggering ExpectedMachine update workflow")
 
@@ -1203,10 +1142,20 @@ func (cemh CreateExpectedMachinesHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Expected Machine update data", validationErrors)
 	}
 
+	// Build the inputs and a credentials lookup keyed by the ExpectedMachineID
+	// we generate here. After CreateMultiple returns we look credentials up by
+	// the DB record's ID rather than by slice index, so correlation doesn't
+	// depend on the DAO preserving input order.
+	credsByID := make(map[uuid.UUID]cdbm.ExpectedMachineCredentials, len(apiRequests))
 	createInputs := make([]cdbm.ExpectedMachineCreateInput, 0, len(apiRequests))
 	for _, machineReq := range apiRequests {
+		id := uuid.New()
+		credsByID[id] = cdbm.ExpectedMachineCredentials{
+			Username: machineReq.DefaultBmcUsername,
+			Password: machineReq.DefaultBmcPassword,
+		}
 		createInputs = append(createInputs, cdbm.ExpectedMachineCreateInput{
-			ExpectedMachineID:        uuid.New(),
+			ExpectedMachineID:        id,
 			SiteID:                   site.ID,
 			BmcMacAddress:            machineReq.BmcMacAddress,
 			ChassisSerialNumber:      machineReq.ChassisSerialNumber,
@@ -1233,67 +1182,17 @@ func (cemh CreateExpectedMachinesHandler) Handle(c echo.Context) error {
 	}
 
 	workflowMachines := make([]*cwssaws.ExpectedMachine, 0, len(createdExpectedMachines))
-	for i, createdMachine := range createdExpectedMachines {
-		workflowMachine := &cwssaws.ExpectedMachine{
-			Id:                       &cwssaws.UUID{Value: createdMachine.ID.String()},
-			BmcMacAddress:            createdMachine.BmcMacAddress,
-			ChassisSerialNumber:      createdMachine.ChassisSerialNumber,
-			FallbackDpuSerialNumbers: createdMachine.FallbackDpuSerialNumbers,
-			SkuId:                    createdMachine.SkuID,
+	for i := range createdExpectedMachines {
+		em := &createdExpectedMachines[i]
+		creds, ok := credsByID[em.ID]
+		if !ok {
+			// CreateMultiple returned an ID we didn't ask it to create.
+			// This shouldn't actually happen, so fail loudly instead of
+			// attaching the wrong credentials to a machine.
+			logger.Error().Str("ExpectedMachineID", em.ID.String()).Msg("CreateMultiple returned a machine with an unrecognized ID")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to correlate created Expected Machine to request", nil)
 		}
-
-		if createdMachine.RackID != nil {
-			workflowMachine.RackId = &cwssaws.RackId{Id: *createdMachine.RackID}
-		}
-
-		if createdMachine.Name != nil {
-			workflowMachine.Name = createdMachine.Name
-		}
-
-		if createdMachine.Manufacturer != nil {
-			workflowMachine.Manufacturer = createdMachine.Manufacturer
-		}
-
-		if createdMachine.Model != nil {
-			workflowMachine.Model = createdMachine.Model
-		}
-
-		if createdMachine.Description != nil {
-			workflowMachine.Description = createdMachine.Description
-		}
-
-		if createdMachine.FirmwareVersion != nil {
-			workflowMachine.FirmwareVersion = createdMachine.FirmwareVersion
-		}
-
-		if createdMachine.SlotID != nil {
-			workflowMachine.SlotId = createdMachine.SlotID
-		}
-
-		if createdMachine.TrayIdx != nil {
-			workflowMachine.TrayIdx = createdMachine.TrayIdx
-		}
-
-		if createdMachine.HostID != nil {
-			workflowMachine.HostId = createdMachine.HostID
-		}
-
-		if apiRequests[i].DefaultBmcUsername != nil {
-			workflowMachine.BmcUsername = *apiRequests[i].DefaultBmcUsername
-		}
-
-		if apiRequests[i].DefaultBmcPassword != nil {
-			workflowMachine.BmcPassword = *apiRequests[i].DefaultBmcPassword
-		}
-
-		protoLabels := util.ProtobufLabelsFromAPILabels(apiRequests[i].Labels)
-		if protoLabels != nil {
-			workflowMachine.Metadata = &cwssaws.Metadata{
-				Labels: protoLabels,
-			}
-		}
-
-		workflowMachines = append(workflowMachines, workflowMachine)
+		workflowMachines = append(workflowMachines, em.ToProto(creds))
 	}
 
 	logger.Info().Int("Count", len(workflowMachines)).Msg("triggering CreateExpectedMachines workflow on Site")
@@ -1678,7 +1577,11 @@ func (uemh UpdateExpectedMachinesHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Failed to validate Expected Machine update data", validationErrors)
 	}
 
-	// Prepare ExpectedMachines input for DB
+	// Build the inputs and a credentials lookup keyed by the ExpectedMachineID
+	// from each request. After UpdateMultiple returns we look credentials up
+	// by the DB record's ID rather than by slice index, so correlation
+	// doesn't depend on the DAO preserving input order.
+	credsByID := make(map[uuid.UUID]cdbm.ExpectedMachineCredentials, len(apiRequests))
 	updateInputs := make([]cdbm.ExpectedMachineUpdateInput, 0, len(apiRequests))
 	for _, machineReq := range apiRequests {
 		// APIExpectedMachineUpdateRequest must allow nil ID for single update use case. If present here, it has already been validated.
@@ -1688,6 +1591,10 @@ func (uemh UpdateExpectedMachinesHandler) Handle(c echo.Context) error {
 		}
 
 		emID, _ := uuid.Parse(*machineReq.ID)
+		credsByID[emID] = cdbm.ExpectedMachineCredentials{
+			Username: machineReq.DefaultBmcUsername,
+			Password: machineReq.DefaultBmcPassword,
+		}
 		updateInputs = append(updateInputs, cdbm.ExpectedMachineUpdateInput{
 			ExpectedMachineID:        emID,
 			BmcMacAddress:            machineReq.BmcMacAddress,
@@ -1715,67 +1622,17 @@ func (uemh UpdateExpectedMachinesHandler) Handle(c echo.Context) error {
 	}
 
 	workflowMachines := make([]*cwssaws.ExpectedMachine, 0, len(updatedExpectedMachines))
-	for i, updatedMachine := range updatedExpectedMachines {
-		workflowMachine := &cwssaws.ExpectedMachine{
-			Id:                       &cwssaws.UUID{Value: updatedMachine.ID.String()},
-			BmcMacAddress:            updatedMachine.BmcMacAddress,
-			ChassisSerialNumber:      updatedMachine.ChassisSerialNumber,
-			FallbackDpuSerialNumbers: updatedMachine.FallbackDpuSerialNumbers,
-			SkuId:                    updatedMachine.SkuID,
+	for i := range updatedExpectedMachines {
+		em := &updatedExpectedMachines[i]
+		creds, ok := credsByID[em.ID]
+		if !ok {
+			// UpdateMultiple returned an ID we didn't ask it to create.
+			// This shouldn't actually happen, so fail loudly instead of
+			// attaching the wrong credentials to a machine.
+			logger.Error().Str("ExpectedMachineID", em.ID.String()).Msg("UpdateMultiple returned a machine with an unrecognized ID")
+			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to correlate updated Expected Machine to request", nil)
 		}
-
-		if updatedMachine.RackID != nil {
-			workflowMachine.RackId = &cwssaws.RackId{Id: *updatedMachine.RackID}
-		}
-
-		if updatedMachine.Name != nil {
-			workflowMachine.Name = updatedMachine.Name
-		}
-
-		if updatedMachine.Manufacturer != nil {
-			workflowMachine.Manufacturer = updatedMachine.Manufacturer
-		}
-
-		if updatedMachine.Model != nil {
-			workflowMachine.Model = updatedMachine.Model
-		}
-
-		if updatedMachine.Description != nil {
-			workflowMachine.Description = updatedMachine.Description
-		}
-
-		if updatedMachine.FirmwareVersion != nil {
-			workflowMachine.FirmwareVersion = updatedMachine.FirmwareVersion
-		}
-
-		if updatedMachine.SlotID != nil {
-			workflowMachine.SlotId = updatedMachine.SlotID
-		}
-
-		if updatedMachine.TrayIdx != nil {
-			workflowMachine.TrayIdx = updatedMachine.TrayIdx
-		}
-
-		if updatedMachine.HostID != nil {
-			workflowMachine.HostId = updatedMachine.HostID
-		}
-
-		if apiRequests[i].DefaultBmcUsername != nil {
-			workflowMachine.BmcUsername = *apiRequests[i].DefaultBmcUsername
-		}
-
-		if apiRequests[i].DefaultBmcPassword != nil {
-			workflowMachine.BmcPassword = *apiRequests[i].DefaultBmcPassword
-		}
-
-		protoLabels := util.ProtobufLabelsFromAPILabels(updatedMachine.Labels)
-		if protoLabels != nil {
-			workflowMachine.Metadata = &cwssaws.Metadata{
-				Labels: protoLabels,
-			}
-		}
-
-		workflowMachines = append(workflowMachines, workflowMachine)
+		workflowMachines = append(workflowMachines, em.ToProto(creds))
 	}
 
 	logger.Info().Int("Count", len(workflowMachines)).Msg("triggering Expected Machine update workflow")
