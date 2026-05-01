@@ -132,7 +132,7 @@ func LoginCommand() *cli.Command {
 
 func hasExplicitOIDCLoginFlags(c *cli.Context) bool {
 	for _, name := range []string{"token-url", "keycloak-url", "keycloak-realm", "client-id", "client-secret", "username", "password"} {
-		if c.IsSet(name) {
+		if cliFlagExplicitlySet(c, name) {
 			return true
 		}
 	}
@@ -140,7 +140,26 @@ func hasExplicitOIDCLoginFlags(c *cli.Context) bool {
 }
 
 func hasExplicitAPIKeyLoginFlags(c *cli.Context) bool {
-	return c.IsSet("api-key") || c.IsSet("authn-url")
+	return cliFlagExplicitlySet(c, "api-key") || cliFlagExplicitlySet(c, "authn-url")
+}
+
+func cliFlagExplicitlySet(c *cli.Context, name string) bool {
+	for _, flagName := range c.FlagNames() {
+		if flagName == name {
+			return commandLineContainsFlag(name)
+		}
+	}
+	return false
+}
+
+func commandLineContainsFlag(name string) bool {
+	longFlag := "--" + name
+	for _, arg := range os.Args[1:] {
+		if arg == longFlag || strings.HasPrefix(arg, longFlag+"=") {
+			return true
+		}
+	}
+	return false
 }
 
 // InitCommand returns the 'init' CLI command that generates a sample config.
@@ -535,6 +554,8 @@ func saveOIDCToken(oidc *ConfigOIDC, tokenResp *TokenResponse) error {
 	if tokenResp.RefreshToken != "" {
 		oidc.RefreshToken = tokenResp.RefreshToken
 	}
-	oidc.ExpiresAt = time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second).Format(time.RFC3339)
+	if tokenResp.ExpiresIn > 0 {
+		oidc.ExpiresAt = time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second).Format(time.RFC3339)
+	}
 	return nil
 }

@@ -145,11 +145,19 @@ func TestAutoRefreshTokenToPathSavesSelectedConfig(t *testing.T) {
 }
 
 func TestSaveOIDCTokenPreservesExistingRefreshTokenWhenOmitted(t *testing.T) {
-	oidc := &ConfigOIDC{RefreshToken: "existing-refresh"}
+	oidc := &ConfigOIDC{RefreshToken: "existing-refresh", ExpiresAt: "2026-01-01T00:00:00Z"}
 	require.NoError(t, saveOIDCToken(oidc, &TokenResponse{AccessToken: "new-token", ExpiresIn: 3600}))
 	require.Equal(t, "new-token", oidc.Token)
 	require.Equal(t, "existing-refresh", oidc.RefreshToken)
-	require.NotEmpty(t, oidc.ExpiresAt)
+	require.NotEqual(t, "2026-01-01T00:00:00Z", oidc.ExpiresAt)
+}
+
+func TestSaveOIDCTokenPreservesExpiresAtWhenExpiresInMissing(t *testing.T) {
+	oidc := &ConfigOIDC{Token: "old-token", RefreshToken: "old-refresh", ExpiresAt: "2026-01-01T00:00:00Z"}
+	require.NoError(t, saveOIDCToken(oidc, &TokenResponse{AccessToken: "new-token", RefreshToken: "new-refresh"}))
+	require.Equal(t, "new-token", oidc.Token)
+	require.Equal(t, "new-refresh", oidc.RefreshToken)
+	require.Equal(t, "2026-01-01T00:00:00Z", oidc.ExpiresAt)
 }
 
 func TestSaveOIDCTokenErrorsWhenAccessTokenMissing(t *testing.T) {
@@ -197,6 +205,7 @@ func TestLoginCommandExplicitAPIKeyWinsOverOIDCFlags(t *testing.T) {
 	}
 	require.NoError(t, flags.Set("api-key", "explicit-key"))
 	require.NoError(t, flags.Set("token-url", "https://oidc.example.invalid/token"))
+	withArgs(t, "carbidecli", "login", "--api-key", "explicit-key", "--token-url", "https://oidc.example.invalid/token")
 
 	ctx := cli.NewContext(cli.NewApp(), flags, nil)
 	require.NoError(t, LoginCommand().Action(ctx))
@@ -254,6 +263,7 @@ func TestLoginCommandExplicitAPIKeyRequiresAuthnURL(t *testing.T) {
 		flags.String(name, "", "")
 	}
 	require.NoError(t, flags.Set("api-key", "explicit-key"))
+	withArgs(t, "carbidecli", "login", "--api-key", "explicit-key")
 
 	ctx := cli.NewContext(cli.NewApp(), flags, nil)
 	err := LoginCommand().Action(ctx)
@@ -271,11 +281,30 @@ func TestLoginCommandExplicitAPIKeyModeRequiresKey(t *testing.T) {
 		flags.String(name, "", "")
 	}
 	require.NoError(t, flags.Set("authn-url", "https://auth.example.invalid/token"))
+	withArgs(t, "carbidecli", "login", "--authn-url", "https://auth.example.invalid/token")
 
 	ctx := cli.NewContext(cli.NewApp(), flags, nil)
 	err := LoginCommand().Action(ctx)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "api-key")
+}
+
+func TestEnvAuthFlagsDoNotSelectExplicitAPIKeyMode(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	cfg := &ConfigFile{Auth: ConfigAuth{TokenCommand: "printf script-token"}}
+	require.NoError(t, SaveConfigToPath(cfg, configPath))
+	SetConfigPath(configPath)
+	defer SetConfigPath("")
+
+	t.Setenv("CARBIDE_AUTHN_URL", "https://auth.example.invalid/token")
+
+	app, err := NewApp([]byte(`{"openapi":"3.0.0","info":{"title":"test","version":"test"},"paths":{}}`))
+	require.NoError(t, err)
+	require.NoError(t, app.Run([]string{"carbidecli", "login"}))
+
+	loaded, err := LoadConfigFromPath(configPath)
+	require.NoError(t, err)
+	require.Equal(t, "script-token", loaded.Auth.Token)
 }
 
 func TestLoginCommandConfiguredAPIKeyRequiresAuthnURL(t *testing.T) {
@@ -298,4 +327,13 @@ func TestLoginCommandConfiguredAPIKeyRequiresAuthnURL(t *testing.T) {
 	err := LoginCommand().Action(ctx)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "auth.api_key.authn_url")
+}
+
+func withArgs(t *testing.T, args ...string) {
+	t.Helper()
+	oldArgs := os.Args
+	os.Args = append([]string(nil), args...)
+	t.Cleanup(func() {
+		os.Args = oldArgs
+	})
 }
