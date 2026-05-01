@@ -30,8 +30,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	svc "github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/internal/service"
 	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/credential"
+	svc "github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/internal/service"
 	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/credentials"
 	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/db"
 	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/nvswitchmanager"

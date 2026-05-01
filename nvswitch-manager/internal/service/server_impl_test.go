@@ -127,9 +127,9 @@ func TestValidateFirmwareTarget_MissingBmcCredentials(t *testing.T) {
 	tests := map[string]struct {
 		cred *pb.Credentials
 	}{
-		"nil credentials":   {cred: nil},
-		"empty username":    {cred: &pb.Credentials{Username: "", Password: "pass"}},
-		"empty password":    {cred: &pb.Credentials{Username: "admin", Password: ""}},
+		"nil credentials": {cred: nil},
+		"empty username":  {cred: &pb.Credentials{Username: "", Password: "pass"}},
+		"empty password":  {cred: &pb.Credentials{Username: "admin", Password: ""}},
 	}
 
 	for name, tc := range tests {
@@ -155,9 +155,9 @@ func TestValidateFirmwareTarget_MissingNvosCredentials(t *testing.T) {
 	tests := map[string]struct {
 		cred *pb.Credentials
 	}{
-		"nil credentials":   {cred: nil},
-		"empty username":    {cred: &pb.Credentials{Username: "", Password: "pass"}},
-		"empty password":    {cred: &pb.Credentials{Username: "nvos", Password: ""}},
+		"nil credentials": {cred: nil},
+		"empty username":  {cred: &pb.Credentials{Username: "", Password: "pass"}},
+		"empty password":  {cred: &pb.Credentials{Username: "nvos", Password: ""}},
 	}
 
 	for name, tc := range tests {

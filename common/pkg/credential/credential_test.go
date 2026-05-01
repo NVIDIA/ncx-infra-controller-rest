@@ -36,14 +36,14 @@ func TestCredentialEqual(t *testing.T) {
 		b      *Credential
 		expect bool
 	}{
-		"both nil":            {a: nil, b: nil, expect: true},
-		"first nil":           {a: nil, b: &c1, expect: false},
-		"second nil":          {a: &c1, b: nil, expect: false},
-		"identical":           {a: &c2, b: &c2, expect: true},
-		"equal values":        {a: &c5, b: &c6, expect: true},
-		"different user":      {a: &c2, b: &c3, expect: false},
-		"different password":  {a: &c2, b: &c4, expect: false},
-		"both differ":         {a: &c2, b: &c5, expect: false},
+		"both nil":           {a: nil, b: nil, expect: true},
+		"first nil":          {a: nil, b: &c1, expect: false},
+		"second nil":         {a: &c1, b: nil, expect: false},
+		"identical":          {a: &c2, b: &c2, expect: true},
+		"equal values":       {a: &c5, b: &c6, expect: true},
+		"different user":     {a: &c2, b: &c3, expect: false},
+		"different password": {a: &c2, b: &c4, expect: false},
+		"both differ":        {a: &c2, b: &c5, expect: false},
 	}
 
 	for name, tc := range tests {

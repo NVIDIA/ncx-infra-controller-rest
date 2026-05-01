@@ -109,15 +109,15 @@ func TestInMemoryBMCPutGet(t *testing.T) {
 			ctx := context.Background()
 			mgr := NewInMemoryCredentialManager()
 
-		// Optional initial put
-		if tc.initialPut {
-			mac := parseMAC(t, tc.putMAC)
-			assert.NoError(t, mgr.PutBMC(ctx, mac, tc.putCred))
-			// For the idempotent scenario, put the same credential again
-			if name == "put same credential is no-op" {
-				assert.NoError(t, mgr.PutBMC(ctx, mac, newCredential("user1", "p1")))
+			// Optional initial put
+			if tc.initialPut {
+				mac := parseMAC(t, tc.putMAC)
+				assert.NoError(t, mgr.PutBMC(ctx, mac, tc.putCred))
+				// For the idempotent scenario, put the same credential again
+				if name == "put same credential is no-op" {
+					assert.NoError(t, mgr.PutBMC(ctx, mac, newCredential("user1", "p1")))
+				}
 			}
-		}
 
 			// Get flow
 			got, err := mgr.GetBMC(ctx, parseMAC(t, tc.getMAC))
@@ -132,9 +132,9 @@ func TestInMemoryBMCPutGet(t *testing.T) {
 			assert.Equal(t, tc.wantUser, got.User)
 			assert.Equal(t, tc.wantPass, got.Password.Value)
 
-		if tc.samePtr && tc.initialPut {
-			assert.Same(t, tc.putCred, got)
-		}
+			if tc.samePtr && tc.initialPut {
+				assert.Same(t, tc.putCred, got)
+			}
 		})
 	}
 }

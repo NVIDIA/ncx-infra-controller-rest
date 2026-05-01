@@ -61,12 +61,12 @@ func New(ctx context.Context, c Config) (*Service, error) {
 		if err != nil {
 			return nil, fmt.Errorf("database connection required for persistent mode: %w", err)
 		}
-		
+
 		if err := migrations.Migrate(ctx, pg); err != nil {
 			return nil, fmt.Errorf("failed to run database migrations: %w", err)
 		}
 		db = pg.DB()
-		log.Info("Connected to database")		
+		log.Info("Connected to database")
 	}
 
 	nsmConfig, err := c.ToNsmConf()

@@ -26,8 +26,8 @@ import (
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 
-	pb "github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/internal/proto/v1"
 	"github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/credential"
+	pb "github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/internal/proto/v1"
 	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/common/vendor"
 	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/converter/protobuf"
 	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/firmwaremanager"
