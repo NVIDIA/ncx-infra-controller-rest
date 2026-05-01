@@ -1075,12 +1075,12 @@ func (uvvh UpdateVPCVirtualizationHandler) Handle(c echo.Context) error {
 		}
 
 		logger.Error().Err(err).Msg("error retrieving Tenant Site association")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve Tenant Site association", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to determine Tenant/Site association, DB error", nil)
 	}
 
 	// Verify that the VPC Site is in a valid state
 	if vpc.Site.Status != cdbm.SiteStatusRegistered {
-		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC Site must be in Registered state in order to update virtualization type", nil)
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site that VPC belongs to must be in Registered state in order to update virtualization type", nil)
 	}
 
 	// Get site config
@@ -1092,8 +1092,8 @@ func (uvvh UpdateVPCVirtualizationHandler) Handle(c echo.Context) error {
 	// Verify if site has been enabled for FNN type
 	// No need to check for FNN type, as the request validator guarantees that
 	if !siteConfig.NativeNetworking {
-		logger.Warn().Msg(fmt.Sprintf("VPC Site: %v must have native networking enabled in order to update virtualization type to FNN", vpc.SiteID))
-		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "VPC Site must have native networking enabled in order to update virtualization type to FNN", nil)
+		logger.Warn().Msg(fmt.Sprintf("Site: %v that VPC belongs to does not have native networking enabled, unable to update virtualization type to FNN", vpc.SiteID))
+		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site that VPC belongs to does not have native networking enabled, unable to update virtualization type to FNN", nil)
 	}
 
 	subnetDAO := cdbm.NewSubnetDAO(uvvh.dbSession)
