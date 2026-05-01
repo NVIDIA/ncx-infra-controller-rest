@@ -1046,6 +1046,20 @@ func TestUpdateExpectedMachineHandler_Handle(t *testing.T) {
 			},
 		},
 		{
+			name:        "no update fields should return 400",
+			id:          testEM.ID.String(),
+			requestBody: model.APIExpectedMachineUpdateRequest{},
+			setupContext: func(c echo.Context) {
+				c.Set("user", createMockUser(org))
+				c.SetParamNames("orgName", "id")
+				c.SetParamValues(org, testEM.ID.String())
+			},
+			expectedStatus: http.StatusBadRequest,
+			checkResponseContent: func(t *testing.T, body []byte) {
+				assert.Contains(t, string(body), "no updates specified")
+			},
+		},
+		{
 			name: "body ID mismatch with URL should return 400",
 			id:   testEM.ID.String(),
 			requestBody: model.APIExpectedMachineUpdateRequest{
@@ -1115,7 +1129,7 @@ func TestUpdateExpectedMachineHandler_Handle(t *testing.T) {
 			}
 
 			// Check response content if provided
-			if tt.checkResponseContent != nil && rec.Code == http.StatusOK {
+			if tt.checkResponseContent != nil && rec.Code == tt.expectedStatus {
 				tt.checkResponseContent(t, rec.Body.Bytes())
 			}
 		})
@@ -2220,6 +2234,23 @@ func TestUpdateExpectedMachinesHandler_Handle(t *testing.T) {
 				c.SetParamValues(org)
 			},
 			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name: "ID-only batch item should fail",
+			requestBody: []model.APIExpectedMachineUpdateRequest{
+				{
+					ID: cdb.GetStrPtr(testEM1.ID.String()),
+				},
+			},
+			setupContext: func(c echo.Context) {
+				c.Set("user", createMockUser(org))
+				c.SetParamNames("orgName")
+				c.SetParamValues(org)
+			},
+			expectedStatus: http.StatusBadRequest,
+			validateResp: func(t *testing.T, body []byte) {
+				assert.Contains(t, string(body), "no updates specified")
+			},
 		},
 		{
 			name: "non-existent machine should fail",
