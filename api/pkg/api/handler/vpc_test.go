@@ -290,12 +290,19 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 		tc        temporalClient.Client
 		cfg       *config.Config
 	}
+	type expectedStatusDetail struct {
+		status  string
+		message string
+	}
 	type args struct {
-		reqData     *model.APIVpcCreateRequest
-		reqOrg      string
-		reqUser     *cdbm.User
-		respCode    int
-		respMessage string
+		reqData               *model.APIVpcCreateRequest
+		reqOrg                string
+		reqUser               *cdbm.User
+		respCode              int
+		respMessage           string
+		expectedStatus        string
+		expectedVni           *int
+		expectedStatusDetails []expectedStatusDetail
 	}
 
 	dbSession := testSiteInitDB(t)
@@ -402,18 +409,40 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 	scp.IDClientMap[st2.ID.String()] = tsc
 	scp.IDClientMap[st3.ID.String()] = tst3
 
+	vpcWithAllocatedVniName := "Test VPC with allocated VNI"
+	allocatedVni := uint32(7301)
+	expectedAllocatedVni := int(allocatedVni)
+
 	wid := "test-workflow-id"
 	wrun := &tmocks.WorkflowRun{}
 	wrun.On("GetID").Return(wid)
 
 	wrun.Mock.On("Get", mock.Anything, mock.Anything).Return(nil)
 
+	wrunWithAllocatedVni := &tmocks.WorkflowRun{}
+	wrunWithAllocatedVni.On("GetID").Return(wid)
+	wrunWithAllocatedVni.Mock.On("Get", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		controllerVpc, ok := args.Get(1).(*cwssaws.Vpc)
+		if ok {
+			controllerVpc.Status = &cwssaws.VpcStatus{
+				Vni: &allocatedVni,
+			}
+		}
+	}).Return(nil)
+
 	tc.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
 		mock.AnythingOfType("func(internal.Context, uuid.UUID, uuid.UUID) error"), mock.AnythingOfType("uuid.UUID"),
 		mock.AnythingOfType("uuid.UUID")).Return(wrun, nil)
 
 	tsc.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
-		"CreateVPCV2", mock.Anything).Return(wrun, nil)
+		"CreateVPCV2", mock.MatchedBy(func(req *cwssaws.VpcCreationRequest) bool {
+			return req != nil && req.Name == vpcWithAllocatedVniName
+		})).Return(wrunWithAllocatedVni, nil)
+
+	tsc.Mock.On("ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"),
+		"CreateVPCV2", mock.MatchedBy(func(req *cwssaws.VpcCreationRequest) bool {
+			return req == nil || req.Name != vpcWithAllocatedVniName
+		})).Return(wrun, nil)
 
 	// Mock timeout error
 	wruntimeout := &tmocks.WorkflowRun{}
@@ -457,9 +486,55 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 					},
 					NVLinkLogicalPartitionID: cdb.GetStrPtr(nvllp1.ID.String()),
 				},
-				reqOrg:   tnOrg,
-				reqUser:  tnu,
-				respCode: http.StatusCreated,
+				reqOrg:         tnOrg,
+				reqUser:        tnu,
+				respCode:       http.StatusCreated,
+				expectedStatus: cdbm.VpcStatusProvisioning,
+				expectedStatusDetails: []expectedStatusDetail{
+					{
+						status:  cdbm.VpcStatusProvisioning,
+						message: "VPC provisioning has been initiated on Site",
+					},
+				},
+			},
+			wantErr:            false,
+			verifyChildSpanner: true,
+		},
+		{
+			name: "test VPC create API endpoint returns allocated VNI from Site workflow response",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIVpcCreateRequest{
+					Name:                      vpcWithAllocatedVniName,
+					Description:               cdb.GetStrPtr("Test VPC Description"),
+					SiteID:                    st1.ID.String(),
+					NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcFNN),
+					NetworkSecurityGroupID:    &nsgTenant1Site1.ID,
+					Labels: map[string]string{
+						"vpc-dpu-zone": "east1",
+						"vpc-gpu-zone": "west1",
+					},
+					NVLinkLogicalPartitionID: cdb.GetStrPtr(nvllp1.ID.String()),
+				},
+				reqOrg:         tnOrg,
+				reqUser:        tnu,
+				respCode:       http.StatusCreated,
+				expectedStatus: cdbm.VpcStatusReady,
+				expectedVni:    &expectedAllocatedVni,
+				expectedStatusDetails: []expectedStatusDetail{
+					{
+						status:  cdbm.VpcStatusProvisioning,
+						message: "VPC provisioning has been initiated on Site",
+					},
+					{
+						status:  cdbm.VpcStatusReady,
+						message: "VPC is ready for use",
+					},
+				},
 			},
 			wantErr:            false,
 			verifyChildSpanner: true,
@@ -486,9 +561,16 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 					},
 					NVLinkLogicalPartitionID: cdb.GetStrPtr(nvllp1.ID.String()),
 				},
-				reqOrg:   tnOrg,
-				reqUser:  tnu,
-				respCode: http.StatusCreated,
+				reqOrg:         tnOrg,
+				reqUser:        tnu,
+				respCode:       http.StatusCreated,
+				expectedStatus: cdbm.VpcStatusProvisioning,
+				expectedStatusDetails: []expectedStatusDetail{
+					{
+						status:  cdbm.VpcStatusProvisioning,
+						message: "VPC provisioning has been initiated on Site",
+					},
+				},
 			},
 			wantErr:            false,
 			verifyChildSpanner: true,
@@ -637,9 +719,16 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 					},
 					NVLinkLogicalPartitionID: cdb.GetStrPtr(nvllp1.ID.String()),
 				},
-				reqOrg:   tnOrg,
-				reqUser:  tnu,
-				respCode: http.StatusCreated,
+				reqOrg:         tnOrg,
+				reqUser:        tnu,
+				respCode:       http.StatusCreated,
+				expectedStatus: cdbm.VpcStatusProvisioning,
+				expectedStatusDetails: []expectedStatusDetail{
+					{
+						status:  cdbm.VpcStatusProvisioning,
+						message: "VPC provisioning has been initiated on Site",
+					},
+				},
 			},
 			wantErr:            false,
 			verifyChildSpanner: true,
@@ -969,8 +1058,19 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 			} else {
 				assert.Equal(t, *rst.NetworkVirtualizationType, cdbm.VpcEthernetVirtualizer)
 			}
-			assert.Equal(t, rst.Status, cdbm.VpcStatusReady)
-			assert.Equal(t, len(rst.StatusHistory), 1)
+			assert.Equal(t, tt.args.expectedStatus, rst.Status)
+			require.Len(t, rst.StatusHistory, len(tt.args.expectedStatusDetails))
+			for i, expectedStatusDetail := range tt.args.expectedStatusDetails {
+				assert.Equal(t, expectedStatusDetail.status, rst.StatusHistory[i].Status)
+				require.NotNil(t, rst.StatusHistory[i].Message)
+				assert.Equal(t, expectedStatusDetail.message, *rst.StatusHistory[i].Message)
+			}
+			if tt.args.expectedVni != nil {
+				require.NotNil(t, rst.Vni)
+				assert.Equal(t, *tt.args.expectedVni, *rst.Vni)
+			} else {
+				assert.Nil(t, rst.Vni)
+			}
 
 			if tt.args.reqData.NVLinkLogicalPartitionID != nil {
 				assert.Equal(t, *rst.NVLinkLogicalPartitionID, *tt.args.reqData.NVLinkLogicalPartitionID)
