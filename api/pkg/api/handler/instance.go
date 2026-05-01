@@ -41,6 +41,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
 	common "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
+	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
 	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
 	auth "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/authorization"
@@ -1518,14 +1519,7 @@ func (cih CreateInstanceHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
-	// Prepare the labels for the metadata of the carbide call.
-	createLabels := []*cwssaws.Label{}
-	for k, v := range instance.Labels {
-		createLabels = append(createLabels, &cwssaws.Label{
-			Key:   k,
-			Value: &v,
-		})
-	}
+	createLabels := util.ProtobufLabelsFromAPILabels(instance.Labels)
 
 	description := ""
 	if instance.Description != nil {
@@ -3213,14 +3207,7 @@ func (uih UpdateInstanceHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
 	}
 
-	// Prepare the labels for the metadata of the carbide call.
-	labels := []*cwssaws.Label{}
-	for k, v := range ui.Labels {
-		labels = append(labels, &cwssaws.Label{
-			Key:   k,
-			Value: &v,
-		})
-	}
+	labels := util.ProtobufLabelsFromAPILabels(ui.Labels)
 
 	description := ""
 	if ui.Description != nil {
@@ -3970,9 +3957,10 @@ func (gaih GetAllInstanceHandler) Handle(c echo.Context) error {
 	filter.SiteIDs = siteIDs
 
 	// Get query text for full text search from query param
-	if searchQueryStr := c.QueryParam("query"); searchQueryStr != "" {
-		filter.SearchQuery = &searchQueryStr
-		gaih.tracerSpan.SetAttribute(handlerSpan, attribute.String("query", searchQueryStr), logger)
+	searchQuery := common.GetSearchQuery(c)
+	if searchQuery != nil {
+		filter.SearchQuery = searchQuery
+		gaih.tracerSpan.SetAttribute(handlerSpan, attribute.String("query", *searchQuery), logger)
 	}
 
 	// Get status from query param

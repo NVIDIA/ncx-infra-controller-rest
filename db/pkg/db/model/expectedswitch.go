@@ -297,19 +297,19 @@ func (essd ExpectedSwitchSQLDAO) setQueryWithFilter(filter ExpectedSwitchFilterI
 		}
 	}
 
-	if filter.SearchQuery != nil {
-		normalizedTokens := db.GetStrPtr(db.GetStringToTsQuery(*filter.SearchQuery))
+	searchQuery, searchTokens, ok := db.NormalizeSearchQuery(filter.SearchQuery)
+	if ok {
 		query = query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
-				Where("to_tsvector('english', (coalesce(es.bmc_mac_address, ' ') || ' ' || coalesce(es.switch_serial_number, ' ') || ' ' || coalesce(es.labels::text, ' '))) @@ to_tsquery('english', ?)", *normalizedTokens).
-				WhereOr("es.bmc_mac_address ILIKE ?", "%"+*filter.SearchQuery+"%").
-				WhereOr("es.switch_serial_number ILIKE ?", "%"+*filter.SearchQuery+"%").
-				WhereOr("es.labels::text ILIKE ?", "%"+*filter.SearchQuery+"%").
-				WhereOr("es.id::text ILIKE ?", "%"+*filter.SearchQuery+"%").
-				WhereOr("es.site_id::text ILIKE ?", "%"+*filter.SearchQuery+"%")
+				Where("to_tsvector('english', (coalesce(es.bmc_mac_address, ' ') || ' ' || coalesce(es.switch_serial_number, ' ') || ' ' || coalesce(es.labels::text, ' '))) @@ to_tsquery('english', ?)", *searchTokens).
+				WhereOr("es.bmc_mac_address ILIKE ?", "%"+searchQuery+"%").
+				WhereOr("es.switch_serial_number ILIKE ?", "%"+searchQuery+"%").
+				WhereOr("es.labels::text ILIKE ?", "%"+searchQuery+"%").
+				WhereOr("es.id::text ILIKE ?", "%"+searchQuery+"%").
+				WhereOr("es.site_id::text ILIKE ?", "%"+searchQuery+"%")
 		})
 		if expectedSwitchDAOSpan != nil {
-			essd.tracerSpan.SetAttribute(expectedSwitchDAOSpan, "search_query", *filter.SearchQuery)
+			essd.tracerSpan.SetAttribute(expectedSwitchDAOSpan, "search_query", searchQuery)
 		}
 	}
 
