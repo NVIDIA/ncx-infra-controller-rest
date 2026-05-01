@@ -86,7 +86,10 @@ func LoginCommand() *cli.Command {
 			if apiKey == "" && explicitAPIKey && cfg.Auth.APIKey != nil {
 				apiKey = cfg.Auth.APIKey.Key
 			}
-			if apiKey != "" && explicitAPIKey {
+			if explicitAPIKey {
+				if apiKey == "" {
+					return fmt.Errorf("api-key must be provided when using API key auth")
+				}
 				authnURL := c.String("authn-url")
 				if authnURL == "" && cfg.Auth.APIKey != nil && cfg.Auth.APIKey.AuthnURL != "" {
 					authnURL = cfg.Auth.APIKey.AuthnURL

@@ -199,6 +199,23 @@ func TestLoginCommandExplicitAPIKeyRequiresAuthnURL(t *testing.T) {
 	require.Contains(t, err.Error(), "authn-url")
 }
 
+func TestLoginCommandExplicitAPIKeyModeRequiresKey(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	SetConfigPath(configPath)
+	defer SetConfigPath("")
+
+	flags := flag.NewFlagSet("login", flag.ContinueOnError)
+	for _, name := range []string{"api-key", "authn-url", "token-url", "keycloak-url", "keycloak-realm", "client-id", "client-secret", "username", "password", "token-command"} {
+		flags.String(name, "", "")
+	}
+	require.NoError(t, flags.Set("authn-url", "https://auth.example.invalid/token"))
+
+	ctx := cli.NewContext(cli.NewApp(), flags, nil)
+	err := LoginCommand().Action(ctx)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "api-key")
+}
+
 func TestLoginCommandConfiguredAPIKeyRequiresAuthnURL(t *testing.T) {
 	configPath := filepath.Join(t.TempDir(), "config.yaml")
 	cfg := &ConfigFile{
