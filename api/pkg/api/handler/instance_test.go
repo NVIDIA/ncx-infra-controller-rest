@@ -6765,7 +6765,10 @@ func TestGetInstanceHandler_Handle(t *testing.T) {
 			}
 
 			if tt.queryIncludeRelationVpc != nil {
-				assert.Equal(t, *tt.expectedVpcName, rst.Vpc.Name)
+				require.NotNil(t, tt.expectedVpcName)
+				require.NotNil(t, rst.Vpc)
+				require.NotNil(t, rst.Vpc.Metadata.Name)
+				assert.Equal(t, *tt.expectedVpcName, *rst.Vpc.Metadata.Name)
 			}
 
 			if tt.queryIncludeRelationInstanceType != nil {
@@ -8323,7 +8326,10 @@ func TestGetAllInstanceHandler_Handle(t *testing.T) {
 			}
 
 			if tt.queryIncludeRelationVpc != nil {
-				assert.Equal(t, *tt.expectedVpcName, rst[0].Vpc.Name)
+				require.NotNil(t, tt.expectedVpcName)
+				require.NotNil(t, rst[0].Vpc)
+				require.NotNil(t, rst[0].Vpc.Metadata.Name)
+				assert.Equal(t, *tt.expectedVpcName, *rst[0].Vpc.Metadata.Name)
 			}
 
 			if tt.queryIncludeRelationInstanceType != nil {

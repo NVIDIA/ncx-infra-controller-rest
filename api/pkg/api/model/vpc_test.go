@@ -209,11 +209,13 @@ func TestAPIVpcCreateRequest_Validate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			vcr := APIVpcCreateRequest{
-				Name:                      tt.fields.Name,
-				Description:               tt.fields.Description,
+				Metadata: APICarbideObjectMetadata{
+					Name:        &tt.fields.Name,
+					Description: tt.fields.Description,
+					Labels:      tt.fields.Labels,
+				},
 				SiteID:                    tt.fields.SiteID,
 				NetworkVirtualizationType: tt.fields.NetworkVirtualizationType,
-				Labels:                    tt.fields.Labels,
 				Vni:                       tt.fields.Vni,
 				RoutingProfile:            tt.fields.RoutingProfile,
 			}
@@ -301,9 +303,11 @@ func TestAPIVpcUpdateRequest_Validate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			vur := APIVpcUpdateRequest{
-				Name:        &tt.fields.Name,
-				Description: tt.fields.Description,
-				Labels:      tt.fields.Labels,
+				Metadata: APICarbideObjectMetadata{
+					Name:        &tt.fields.Name,
+					Description: tt.fields.Description,
+					Labels:      tt.fields.Labels,
+				},
 			}
 
 			if err := vur.Validate(); (err != nil) != tt.wantErr {
@@ -443,9 +447,15 @@ func TestNewAPIVpc(t *testing.T) {
 				dbsds: dbsds,
 			},
 			want: APIVpc{
-				ID:                        dbVpc.ID.String(),
-				Name:                      dbVpc.Name,
-				Description:               dbVpc.Description,
+				ID: dbVpc.ID.String(),
+				Metadata: APICarbideObjectMetadata{
+					Name:        &dbVpc.Name,
+					Description: dbVpc.Description,
+					Labels: map[string]string{
+						"zone": "1",
+						"west": "2",
+					},
+				},
 				Org:                       dbVpc.Org,
 				InfrastructureProviderID:  util.GetUUIDPtrToStrPtr(&dbVpc.InfrastructureProviderID),
 				TenantID:                  util.GetUUIDPtrToStrPtr(&dbVpc.TenantID),
@@ -456,13 +466,9 @@ func TestNewAPIVpc(t *testing.T) {
 				RequestedVni:              dbVpc.Vni,
 				Vni:                       dbVpc.ActiveVni,
 				Status:                    dbVpc.Status,
-				Labels: map[string]string{
-					"zone": "1",
-					"west": "2",
-				},
-				StatusHistory: apidbsh,
-				Created:       dbVpc.Created,
-				Updated:       dbVpc.Updated,
+				StatusHistory:             apidbsh,
+				Created:                   dbVpc.Created,
+				Updated:                   dbVpc.Updated,
 			},
 		},
 		{
@@ -476,9 +482,15 @@ func TestNewAPIVpc(t *testing.T) {
 				dbsds: dbsds,
 			},
 			want: APIVpc{
-				ID:                        dbVpc.ID.String(),
-				Name:                      dbVpc.Name,
-				Description:               dbVpc.Description,
+				ID: dbVpc.ID.String(),
+				Metadata: APICarbideObjectMetadata{
+					Name:        &dbVpc.Name,
+					Description: dbVpc.Description,
+					Labels: map[string]string{
+						"zone": "1",
+						"west": "2",
+					},
+				},
 				Org:                       dbVpc.Org,
 				InfrastructureProviderID:  util.GetUUIDPtrToStrPtr(&dbVpc.InfrastructureProviderID),
 				TenantID:                  util.GetUUIDPtrToStrPtr(&dbVpc.TenantID),
@@ -489,13 +501,9 @@ func TestNewAPIVpc(t *testing.T) {
 				RequestedVni:              dbVpc.Vni,
 				Vni:                       dbVpc.ActiveVni,
 				Status:                    dbVpc.Status,
-				Labels: map[string]string{
-					"zone": "1",
-					"west": "2",
-				},
-				StatusHistory: apidbsh,
-				Created:       dbVpc.Created,
-				Updated:       dbVpc.Updated,
+				StatusHistory:             apidbsh,
+				Created:                   dbVpc.Created,
+				Updated:                   dbVpc.Updated,
 			},
 		},
 	}
@@ -504,8 +512,8 @@ func TestNewAPIVpc(t *testing.T) {
 			got := NewAPIVpc(tt.args.dbVpc, tt.args.dbsds)
 
 			assert.Equal(t, tt.want.ID, got.ID)
-			assert.Equal(t, tt.want.Name, got.Name)
-			assert.Equal(t, tt.want.Description, got.Description)
+			assert.Equal(t, tt.want.Metadata.Name, got.Metadata.Name)
+			assert.Equal(t, tt.want.Metadata.Description, got.Metadata.Description)
 			assert.Equal(t, tt.want.Org, got.Org)
 			assert.Equal(t, *tt.want.InfrastructureProviderID, *got.InfrastructureProviderID)
 			assert.Equal(t, *tt.want.TenantID, *got.TenantID)
@@ -521,7 +529,7 @@ func TestNewAPIVpc(t *testing.T) {
 				assert.NotNil(t, got.RequestedVni)
 				assert.Equal(t, *tt.want.RequestedVni, *got.RequestedVni)
 			}
-			assert.Equal(t, len(tt.want.Labels), len(got.Labels))
+			assert.Equal(t, len(tt.want.Metadata.Labels), len(got.Metadata.Labels))
 			assert.Equal(t, tt.want.Status, got.Status)
 			assert.Equal(t, tt.want.StatusHistory, got.StatusHistory)
 			assert.Equal(t, tt.want.Created, got.Created)

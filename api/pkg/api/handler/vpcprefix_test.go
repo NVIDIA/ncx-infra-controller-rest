@@ -1006,7 +1006,7 @@ func TestVpcPrefixHandler_GetAll(t *testing.T) {
 
 			if tc.queryIncludeRelations1 != nil || tc.queryIncludeRelations2 != nil || tc.queryIncludeRelations3 != nil || tc.queryIncludeRelations4 != nil {
 				if tc.expectedVpcName != nil {
-					assert.Equal(t, *tc.expectedVpcName, resp[0].Vpc.Name)
+					assert.Equal(t, *tc.expectedVpcName, resp[0].Vpc.Metadata.Name)
 				}
 				if tc.expectetIPv4Name != nil {
 					assert.Equal(t, *tc.expectetIPv4Name, resp[0].IPBlock.Name)
@@ -1237,7 +1237,7 @@ func TestVpcPrefixHandler_Get(t *testing.T) {
 
 				if tc.queryIncludeRelations1 != nil || tc.queryIncludeRelations2 != nil || tc.queryIncludeRelations3 != nil {
 					if tc.expectedVpcName != nil {
-						assert.Equal(t, *tc.expectedVpcName, rsp.Vpc.Name)
+						assert.Equal(t, *tc.expectedVpcName, rsp.Vpc.Metadata.Name)
 					}
 					if tc.expectetIPName != nil {
 						assert.Equal(t, *tc.expectetIPName, rsp.IPBlock.Name)

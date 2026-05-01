@@ -445,17 +445,19 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcCreateRequest{
-					Name:                      "Test VPC",
-					Description:               cdb.GetStrPtr("Test VPC Description"),
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("Test VPC"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+						Labels: map[string]string{
+							"vpc-dpu-zone": "east1",
+							"vpc-gpu-zone": "west1",
+						},
+					},
 					SiteID:                    st1.ID.String(),
 					NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcFNN),
 					NetworkSecurityGroupID:    &nsgTenant1Site1.ID,
 					Vni:                       cdb.GetIntPtr(555),
-					Labels: map[string]string{
-						"vpc-dpu-zone": "east1",
-						"vpc-gpu-zone": "west1",
-					},
-					NVLinkLogicalPartitionID: cdb.GetStrPtr(nvllp1.ID.String()),
+					NVLinkLogicalPartitionID:  cdb.GetStrPtr(nvllp1.ID.String()),
 				},
 				reqOrg:   tnOrg,
 				reqUser:  tnu,
@@ -473,18 +475,20 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcCreateRequest{
-					Name:                      "Test VPC routing profile",
-					Description:               cdb.GetStrPtr("Test VPC Description"),
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("Test VPC routing profile"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+						Labels: map[string]string{
+							"vpc-dpu-zone": "east1",
+							"vpc-gpu-zone": "west1",
+						},
+					},
 					SiteID:                    st1.ID.String(),
 					NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcFNN),
 					NetworkSecurityGroupID:    &nsgTenant1Site1.ID,
 					Vni:                       cdb.GetIntPtr(559),
 					RoutingProfile:            cdb.GetStrPtr(model.APIVpcRoutingProfileInternal),
-					Labels: map[string]string{
-						"vpc-dpu-zone": "east1",
-						"vpc-gpu-zone": "west1",
-					},
-					NVLinkLogicalPartitionID: cdb.GetStrPtr(nvllp1.ID.String()),
+					NVLinkLogicalPartitionID:  cdb.GetStrPtr(nvllp1.ID.String()),
 				},
 				reqOrg:   tnOrg,
 				reqUser:  tnu,
@@ -502,8 +506,10 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcCreateRequest{
-					Name:                      "Test VPC unsupported routing profile",
-					Description:               cdb.GetStrPtr("Test VPC Description"),
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("Test VPC unsupported routing profile"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+					},
 					SiteID:                    st1.ID.String(),
 					NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcFNN),
 					RoutingProfile:            cdb.GetStrPtr("tenant-edge"),
@@ -525,8 +531,10 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcCreateRequest{
-					Name:                      "Test VPC restricted routing profile",
-					Description:               cdb.GetStrPtr("Test VPC Description"),
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("Test VPC restricted routing profile"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+					},
 					SiteID:                    st1.ID.String(),
 					NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcFNN),
 					RoutingProfile:            cdb.GetStrPtr(model.APIVpcRoutingProfileInternal),
@@ -548,8 +556,10 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcCreateRequest{
-					Name:                      "Test VPC ethernet routing profile",
-					Description:               cdb.GetStrPtr("Test VPC Description"),
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("Test VPC ethernet routing profile"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+					},
 					SiteID:                    st1.ID.String(),
 					NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer),
 					RoutingProfile:            cdb.GetStrPtr(model.APIVpcRoutingProfileInternal),
@@ -572,18 +582,20 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcCreateRequest{
-					Name:                      "Test VPC",
-					Description:               cdb.GetStrPtr("Test VPC Description"),
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("Test VPC"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+						Labels: map[string]string{
+							"vpc-dpu-zone": "east1",
+							"vpc-gpu-zone": "west1",
+						},
+					},
 					SiteID:                    st1.ID.String(),
 					NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcEthernetVirtualizer),
 					NetworkSecurityGroupID:    &nsgTenant1Site1.ID,
 					Vni:                       cdb.GetIntPtr(555),
 					RoutingProfile:            cdb.GetStrPtr(model.APIVpcRoutingProfileInternal),
-					Labels: map[string]string{
-						"vpc-dpu-zone": "east1",
-						"vpc-gpu-zone": "west1",
-					},
-					NVLinkLogicalPartitionID: cdb.GetStrPtr(nvllp1.ID.String()),
+					NVLinkLogicalPartitionID:  cdb.GetStrPtr(nvllp1.ID.String()),
 				},
 				reqOrg:      tnOrg,
 				reqUser:     tnu,
@@ -602,8 +614,10 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcCreateRequest{
-					Name:           "Test VPC default ethernet routing profile",
-					Description:    cdb.GetStrPtr("Test VPC Description"),
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("Test VPC default ethernet routing profile"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+					},
 					SiteID:         st3.ID.String(),
 					RoutingProfile: cdb.GetStrPtr(model.APIVpcRoutingProfileInternal),
 				},
@@ -624,18 +638,20 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcCreateRequest{
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("Test VPC 2"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+						Labels: map[string]string{
+							"vpc-dpu-zone": "east1",
+							"vpc-gpu-zone": "west1",
+						},
+					},
 					ID:                        db.GetUUIDPtr(uuid.New()),
-					Name:                      "Test VPC 2",
-					Description:               cdb.GetStrPtr("Test VPC Description"),
 					SiteID:                    st1.ID.String(),
 					NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcFNN),
 					NetworkSecurityGroupID:    &nsgTenant1Site1.ID,
 					Vni:                       cdb.GetIntPtr(557),
-					Labels: map[string]string{
-						"vpc-dpu-zone": "east1",
-						"vpc-gpu-zone": "west1",
-					},
-					NVLinkLogicalPartitionID: cdb.GetStrPtr(nvllp1.ID.String()),
+					NVLinkLogicalPartitionID:  cdb.GetStrPtr(nvllp1.ID.String()),
 				},
 				reqOrg:   tnOrg,
 				reqUser:  tnu,
@@ -653,18 +669,20 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcCreateRequest{
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("Test VPC 3"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+						Labels: map[string]string{
+							"vpc-dpu-zone": "east1",
+							"vpc-gpu-zone": "west1",
+						},
+					},
 					ID:                        &existingVPCSt1.ID,
-					Name:                      "Test VPC 3",
-					Description:               cdb.GetStrPtr("Test VPC Description"),
 					SiteID:                    st1.ID.String(),
 					NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcFNN),
 					NetworkSecurityGroupID:    &nsgTenant1Site1.ID,
 					Vni:                       cdb.GetIntPtr(556),
-					Labels: map[string]string{
-						"vpc-dpu-zone": "east1",
-						"vpc-gpu-zone": "west1",
-					},
-					NVLinkLogicalPartitionID: cdb.GetStrPtr(nvllp1.ID.String()),
+					NVLinkLogicalPartitionID:  cdb.GetStrPtr(nvllp1.ID.String()),
 				},
 				reqOrg:   tnOrg,
 				reqUser:  tnu,
@@ -682,16 +700,17 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcCreateRequest{
-					Name:                      "Test VPC bad nsg tenant",
-					Description:               cdb.GetStrPtr("Test VPC Description"),
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("Test VPC bad nsg tenant"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+						Labels: map[string]string{
+							"vpc-dpu-zone": "east1",
+							"vpc-gpu-zone": "west1",
+						},
+					},
 					SiteID:                    st1.ID.String(),
 					NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcFNN),
 					NetworkSecurityGroupID:    &nsgTenant2Site1.ID,
-
-					Labels: map[string]string{
-						"vpc-dpu-zone": "east1",
-						"vpc-gpu-zone": "west1",
-					},
 				},
 				reqOrg:   tnOrg,
 				reqUser:  tnu,
@@ -709,16 +728,17 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcCreateRequest{
-					Name:                      "Test VPC bad nsg tenant",
-					Description:               cdb.GetStrPtr("Test VPC Description"),
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("Test VPC bad nsg tenant"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+						Labels: map[string]string{
+							"vpc-dpu-zone": "east1",
+							"vpc-gpu-zone": "west1",
+						},
+					},
 					SiteID:                    st1.ID.String(),
 					NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcFNN),
 					NetworkSecurityGroupID:    &nsgTenant1Site2.ID,
-
-					Labels: map[string]string{
-						"vpc-dpu-zone": "east1",
-						"vpc-gpu-zone": "west1",
-					},
 				},
 				reqOrg:   tnOrg,
 				reqUser:  tnu,
@@ -736,16 +756,17 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcCreateRequest{
-					Name:                      "Test VPC bad nsg tenant",
-					Description:               cdb.GetStrPtr("Test VPC Description"),
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("Test VPC bad nsg tenant"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+						Labels: map[string]string{
+							"vpc-dpu-zone": "east1",
+							"vpc-gpu-zone": "west1",
+						},
+					},
 					SiteID:                    st1.ID.String(),
 					NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcFNN),
 					NetworkSecurityGroupID:    cdb.GetStrPtr(uuid.NewString()),
-
-					Labels: map[string]string{
-						"vpc-dpu-zone": "east1",
-						"vpc-gpu-zone": "west1",
-					},
 				},
 				reqOrg:   tnOrg,
 				reqUser:  tnu,
@@ -763,9 +784,11 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcCreateRequest{
-					Name:        "Test VPC",
-					Description: cdb.GetStrPtr("Test VPC Description"),
-					SiteID:      st1.ID.String(),
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("Test VPC"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+					},
+					SiteID: st1.ID.String(),
 				},
 				reqOrg:   tnOrg,
 				reqUser:  tnu,
@@ -782,9 +805,11 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcCreateRequest{
-					Name:        "Test VPC",
-					Description: cdb.GetStrPtr("Test VPC Description"),
-					SiteID:      st1.ID.String(),
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("Test VPC"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+					},
+					SiteID: st1.ID.String(),
 				},
 				reqOrg:   ipOrg,
 				reqUser:  ipu,
@@ -801,9 +826,11 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcCreateRequest{
-					Name:        "Test VPC",
-					Description: cdb.GetStrPtr("Test VPC Description"),
-					SiteID:      uuid.NewString(),
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("Test VPC"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+					},
+					SiteID: uuid.NewString(),
 				},
 				reqOrg:   tnOrg,
 				reqUser:  tnu,
@@ -820,9 +847,11 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcCreateRequest{
-					Name:        "Test VPC",
-					Description: cdb.GetStrPtr("Test VPC Description"),
-					SiteID:      st2.ID.String(),
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("Test VPC"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+					},
+					SiteID: st2.ID.String(),
 				},
 				reqOrg:   tnOrg,
 				reqUser:  tnu,
@@ -839,8 +868,10 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcCreateRequest{
-					Name:                      "Test VPC 3",
-					Description:               cdb.GetStrPtr("Test VPC Description 3"),
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("Test VPC 3"),
+						Description: cdb.GetStrPtr("Test VPC Description 3"),
+					},
 					SiteID:                    st3.ID.String(),
 					NetworkVirtualizationType: cdb.GetStrPtr(cdbm.VpcFNN),
 				},
@@ -861,13 +892,15 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcCreateRequest{
-					Name:        "Test VPC 3",
-					Description: cdb.GetStrPtr("Test VPC Description 3"),
-					SiteID:      st3.ID.String(),
-					Labels: map[string]string{
-						"vpc-dpu-zone": "east1",
-						"vpc-gpu-zone": "west1",
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("Test VPC 3"),
+						Description: cdb.GetStrPtr("Test VPC Description 3"),
+						Labels: map[string]string{
+							"vpc-dpu-zone": "east1",
+							"vpc-gpu-zone": "west1",
+						},
 					},
+					SiteID: st3.ID.String(),
 				},
 				reqOrg:   tnOrg,
 				reqUser:  tnu,
@@ -885,12 +918,14 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcCreateRequest{
-					Name:        "Test VPC",
-					Description: cdb.GetStrPtr("Test VPC Description"),
-					SiteID:      st1.ID.String(),
-					Labels: map[string]string{
-						"ygsV9MoUjep1rCwbQskkF9wfMolE3oDTCcxuYSJCx9TLKepCIku9pnHfIkxCxHkb7ucbsBL4hyLqQaHoEqpTBmfoX4Un7sGvQdHGZ7nb68JJEJ3ocFAtyCMCBt66z3ldnTqp8SXXOIhNsOh35MLYQjI8557Pu6o91TsEBqyTz0yz68HHmfNgJoreHpXfeujq4cpElUXXbQ3xfFICkNyghXgFZ0MLs2o0u1Nd29aB113X5g3FKJBCskW6eBULNmeFFG61DMM37q": "east1",
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("Test VPC"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+						Labels: map[string]string{
+							"ygsV9MoUjep1rCwbQskkF9wfMolE3oDTCcxuYSJCx9TLKepCIku9pnHfIkxCxHkb7ucbsBL4hyLqQaHoEqpTBmfoX4Un7sGvQdHGZ7nb68JJEJ3ocFAtyCMCBt66z3ldnTqp8SXXOIhNsOh35MLYQjI8557Pu6o91TsEBqyTz0yz68HHmfNgJoreHpXfeujq4cpElUXXbQ3xfFICkNyghXgFZ0MLs2o0u1Nd29aB113X5g3FKJBCskW6eBULNmeFFG61DMM37q": "east1",
+						},
 					},
+					SiteID: st1.ID.String(),
 				},
 				reqOrg:      tnOrg,
 				reqUser:     tnu,
@@ -951,17 +986,17 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 				t.Fatal(serr)
 			}
 
-			assert.Equal(t, rst.Name, tt.args.reqData.Name)
+			assert.Equal(t, rst.Metadata.Name, tt.args.reqData.Metadata.Name)
 			assert.True(t, tt.args.reqData.ID == nil || rst.ID == tt.args.reqData.ID.String(), "%+v != %+v", rst.ID, tt.args.reqData.ID)
 			if tt.args.reqData.Vni != nil {
 				assert.NotNil(t, rst.RequestedVni)
 				assert.Equal(t, *tt.args.reqData.Vni, *rst.RequestedVni)
 			}
-			if tt.args.reqData.Description != nil {
-				assert.NotNil(t, rst.Description)
-				assert.Equal(t, *rst.Description, *tt.args.reqData.Description)
+			if tt.args.reqData.Metadata.Description != nil {
+				assert.NotNil(t, rst.Metadata.Description)
+				assert.Equal(t, *rst.Metadata.Description, *tt.args.reqData.Metadata.Description)
 			} else {
-				assert.Nil(t, rst.Description)
+				assert.Nil(t, rst.Metadata.Description)
 			}
 			assert.Equal(t, tt.args.reqData.RoutingProfile, rst.RoutingProfile)
 			if tt.args.reqData.NetworkVirtualizationType != nil {
@@ -978,8 +1013,8 @@ func TestCreateVPCHandler_Handle(t *testing.T) {
 				assert.Nil(t, rst.NVLinkLogicalPartitionID)
 			}
 
-			if tt.args.reqData.Labels != nil {
-				assert.Equal(t, len(rst.Labels), len(tt.args.reqData.Labels))
+			if tt.args.reqData.Metadata.Labels != nil {
+				assert.Equal(t, len(rst.Metadata.Labels), len(tt.args.reqData.Metadata.Labels))
 			}
 
 			assert.True(t, tsc.AssertCalled(t, "ExecuteWorkflow", mock.Anything, mock.AnythingOfType("internal.StartWorkflowOptions"), "CreateVPCV2", mock.MatchedBy(func(req *cwssaws.VpcCreationRequest) bool {
@@ -1163,10 +1198,12 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcUpdateRequest{
-					Name:        cdb.GetStrPtr("test-vpc"),
-					Description: cdb.GetStrPtr("Test VPC Description"),
-					Labels: map[string]string{
-						"zone": "westnew",
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("test-vpc"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+						Labels: map[string]string{
+							"zone": "westnew",
+						},
 					},
 					NVLinkLogicalPartitionID: cdb.GetStrPtr(nvllp1.ID.String()),
 				},
@@ -1188,12 +1225,14 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcUpdateRequest{
-					Name:                   cdb.GetStrPtr(uuid.NewString()),
-					Description:            cdb.GetStrPtr("Test VPC Description"),
-					NetworkSecurityGroupID: &nsgTenant2Site1.ID,
-					Labels: map[string]string{
-						"zone": "westnew",
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr(uuid.NewString()),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+						Labels: map[string]string{
+							"zone": "westnew",
+						},
 					},
+					NetworkSecurityGroupID: &nsgTenant2Site1.ID,
 				},
 				reqVPCID: vpc.ID.String(),
 				reqVPC:   vpc,
@@ -1213,12 +1252,14 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcUpdateRequest{
-					Name:                   cdb.GetStrPtr(uuid.NewString()),
-					Description:            cdb.GetStrPtr("Test VPC Description"),
-					NetworkSecurityGroupID: &nsgTenant1Site2.ID,
-					Labels: map[string]string{
-						"zone": "westnew",
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr(uuid.NewString()),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+						Labels: map[string]string{
+							"zone": "westnew",
+						},
 					},
+					NetworkSecurityGroupID: &nsgTenant1Site2.ID,
 				},
 				reqVPCID: vpc.ID.String(),
 				reqVPC:   vpc,
@@ -1238,12 +1279,14 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcUpdateRequest{
-					Name:                   cdb.GetStrPtr(uuid.NewString()),
-					Description:            cdb.GetStrPtr("Test VPC Description"),
-					NetworkSecurityGroupID: cdb.GetStrPtr(uuid.NewString()),
-					Labels: map[string]string{
-						"zone": "westnew",
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr(uuid.NewString()),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+						Labels: map[string]string{
+							"zone": "westnew",
+						},
 					},
+					NetworkSecurityGroupID: cdb.GetStrPtr(uuid.NewString()),
 				},
 				reqVPCID: vpc.ID.String(),
 				reqVPC:   vpc,
@@ -1263,12 +1306,14 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcUpdateRequest{
-					Name:                   cdb.GetStrPtr(uuid.NewString()),
-					Description:            cdb.GetStrPtr("Test VPC Description"),
-					NetworkSecurityGroupID: cdb.GetStrPtr(""),
-					Labels: map[string]string{
-						"zone": "westnew",
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr(uuid.NewString()),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+						Labels: map[string]string{
+							"zone": "westnew",
+						},
 					},
+					NetworkSecurityGroupID: cdb.GetStrPtr(""),
 				},
 				reqVPCID: vpc.ID.String(),
 				reqVPC:   vpc,
@@ -1289,9 +1334,11 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcUpdateRequest{
-					Name:        cdb.GetStrPtr("test-vpc-2"),
-					Description: cdb.GetStrPtr("Test VPC Description"),
-				},
+
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("test-vpc-2"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+					}},
 				reqVPCID: vpc.ID.String(),
 				reqVPC:   vpc,
 				reqOrg:   tnOrg,
@@ -1309,9 +1356,11 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcUpdateRequest{
-					Name:        cdb.GetStrPtr("test-vpc-2"),
-					Description: cdb.GetStrPtr("Test VPC Description"),
-				},
+
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("test-vpc-2"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+					}},
 				reqVPCID: vpc2.ID.String(),
 				reqVPC:   vpc2,
 				reqOrg:   tnOrg,
@@ -1329,9 +1378,11 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcUpdateRequest{
-					Name:        cdb.GetStrPtr("test-vpc"),
-					Description: cdb.GetStrPtr("Test VPC Description"),
-				},
+
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("test-vpc"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+					}},
 				reqVPCID: vpc.ID.String(),
 				reqVPC:   vpc,
 				reqOrg:   ipOrg,
@@ -1349,9 +1400,11 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcUpdateRequest{
-					Name:        cdb.GetStrPtr("test-vpc"),
-					Description: cdb.GetStrPtr("Test VPC Description"),
-				},
+
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("test-vpc"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+					}},
 				reqVPC:   vpc,
 				reqVPCID: "",
 				reqOrg:   tnOrg,
@@ -1369,9 +1422,11 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcUpdateRequest{
-					Name:        cdb.GetStrPtr("test-vpc-3"),
-					Description: cdb.GetStrPtr("Test VPC Description"),
-				},
+
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("test-vpc-3"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+					}},
 				reqVPCID: vpc4.ID.String(),
 				reqVPC:   vpc4,
 				reqOrg:   tnOrg,
@@ -1389,13 +1444,15 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcUpdateRequest{
-					Name:        cdb.GetStrPtr("Test VPC 3"),
-					Description: cdb.GetStrPtr("Test VPC Description 3"),
-					Labels: map[string]string{
-						"vpc-dpu-zone": "east1",
-						"vpc-gpu-zone": "west1",
-					},
-				},
+
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("Test VPC 3"),
+						Description: cdb.GetStrPtr("Test VPC Description 3"),
+						Labels: map[string]string{
+							"vpc-dpu-zone": "east1",
+							"vpc-gpu-zone": "west1",
+						},
+					}},
 				reqOrg:      tnOrg,
 				reqVPCID:    vpc3.ID.String(),
 				reqVPC:      vpc3,
@@ -1415,12 +1472,14 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcUpdateRequest{
-					Name:        db.GetStrPtr("Test VPC"),
-					Description: cdb.GetStrPtr("Test VPC Description"),
-					Labels: map[string]string{
-						"ygsV9MoUjep1rCwbQskkF9wfMolE3oDTCcxuYSJCx9TLKepCIku9pnHfIkxCxHkb7ucbsBL4hyLqQaHoEqpTBmfoX4Un7sGvQdHGZ7nb68JJEJ3ocFAtyCMCBt66z3ldnTqp8SXXOIhNsOh35MLYQjI8557Pu6o91TsEBqyTz0yz68HHmfNgJoreHpXfeujq4cpElUXXbQ3xfFICkNyghXgFZ0MLs2o0u1Nd29aB113X5g3FKJBCskW6eBULNmeFFG61DMM37q": "east1",
-					},
-				},
+
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("Test VPC"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+						Labels: map[string]string{
+							"ygsV9MoUjep1rCwbQskkF9wfMolE3oDTCcxuYSJCx9TLKepCIku9pnHfIkxCxHkb7ucbsBL4hyLqQaHoEqpTBmfoX4Un7sGvQdHGZ7nb68JJEJ3ocFAtyCMCBt66z3ldnTqp8SXXOIhNsOh35MLYQjI8557Pu6o91TsEBqyTz0yz68HHmfNgJoreHpXfeujq4cpElUXXbQ3xfFICkNyghXgFZ0MLs2o0u1Nd29aB113X5g3FKJBCskW6eBULNmeFFG61DMM37q": "east1",
+						},
+					}},
 				reqOrg:      tnOrg,
 				reqVPCID:    vpc.ID.String(),
 				reqVPC:      vpc,
@@ -1440,8 +1499,10 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcUpdateRequest{
-					Name:                     cdb.GetStrPtr("test-vpc"),
-					Description:              cdb.GetStrPtr("Test VPC Description"),
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("test-vpc"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+					},
 					NVLinkLogicalPartitionID: cdb.GetStrPtr(""),
 				},
 				reqVPCID: vpc.ID.String(),
@@ -1462,8 +1523,10 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 			},
 			args: args{
 				reqData: &model.APIVpcUpdateRequest{
-					Name:                     cdb.GetStrPtr("test-vpc"),
-					Description:              cdb.GetStrPtr("Test VPC Description"),
+					Metadata: model.APICarbideObjectMetadata{
+						Name:        cdb.GetStrPtr("test-vpc"),
+						Description: cdb.GetStrPtr("Test VPC Description"),
+					},
 					NVLinkLogicalPartitionID: cdb.GetStrPtr(nvllp2.ID.String()),
 				},
 				reqVPCID: vpc.ID.String(),
@@ -1525,8 +1588,8 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 				t.Fatal(serr)
 			}
 
-			assert.Equal(t, rst.Name, *tt.args.reqData.Name)
-			assert.Equal(t, *rst.Description, *tt.args.reqData.Description)
+			assert.Equal(t, rst.Metadata.Name, tt.args.reqData.Metadata.Name)
+			assert.Equal(t, *rst.Metadata.Description, *tt.args.reqData.Metadata.Description)
 			assert.NotEqual(t, rst.Updated.String(), tt.args.reqVPC.Updated.String())
 
 			if tt.args.reqData.NVLinkLogicalPartitionID != nil {
@@ -1537,8 +1600,8 @@ func TestUpdateVPCHandler_Handle(t *testing.T) {
 				}
 			}
 
-			if tt.args.reqData.Labels != nil {
-				assert.Equal(t, len(rst.Labels), len(tt.args.reqData.Labels))
+			if tt.args.reqData.Metadata.Labels != nil {
+				assert.Equal(t, len(rst.Metadata.Labels), len(tt.args.reqData.Metadata.Labels))
 			}
 
 			if tt.expectedNVLinkPartitionValue != nil {
@@ -2160,8 +2223,8 @@ func TestGetVPCHandler_Handle(t *testing.T) {
 				t.Fatal(serr)
 			}
 
-			assert.Equal(t, rst.Name, tt.args.reqVPC.Name)
-			assert.Equal(t, rst.Description, tt.args.reqVPC.Description)
+			assert.Equal(t, *rst.Metadata.Name, tt.args.reqVPC.Name)
+			assert.Equal(t, rst.Metadata.Description, tt.args.reqVPC.Description)
 
 			if tt.expectedTenantOrg != nil {
 				assert.Equal(t, rst.Tenant.Org, *tt.expectedTenantOrg)
@@ -2868,7 +2931,7 @@ func TestGetAllVPCHandler_Handle(t *testing.T) {
 			assert.Equal(t, tt.wantTotalCount, pr.Total)
 
 			if tt.wantFirstEntry != nil {
-				assert.Equal(t, tt.wantFirstEntry.Name, resp[0].Name)
+				assert.Equal(t, tt.wantFirstEntry.Name, *resp[0].Metadata.Name)
 			}
 
 			if len(resp) > 0 {

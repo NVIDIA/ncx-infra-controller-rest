@@ -1057,7 +1057,8 @@ func TestSubnetHandler_GetAll(t *testing.T) {
 
 			if tc.queryIncludeRelations1 != nil || tc.queryIncludeRelations2 != nil || tc.queryIncludeRelations3 != nil || tc.queryIncludeRelations4 != nil {
 				if tc.expectedVpcName != nil {
-					assert.Equal(t, *tc.expectedVpcName, resp[0].Vpc.Name)
+					require.NotNil(t, resp[0].Vpc.Metadata.Name)
+					assert.Equal(t, *tc.expectedVpcName, *resp[0].Vpc.Metadata.Name)
 				}
 				if tc.expectetIPv4Name != nil {
 					assert.Equal(t, *tc.expectetIPv4Name, resp[0].IPv4Block.Name)
@@ -1295,7 +1296,8 @@ func TestSubnetHandler_Get(t *testing.T) {
 
 				if tc.queryIncludeRelations1 != nil || tc.queryIncludeRelations2 != nil || tc.queryIncludeRelations3 != nil {
 					if tc.expectedVpcName != nil {
-						assert.Equal(t, *tc.expectedVpcName, rsp.Vpc.Name)
+						require.NotNil(t, rsp.Vpc.Metadata.Name)
+						assert.Equal(t, *tc.expectedVpcName, *rsp.Vpc.Metadata.Name)
 					}
 					if tc.expectetIPv4Name != nil {
 						assert.Equal(t, *tc.expectetIPv4Name, rsp.IPv4Block.Name)

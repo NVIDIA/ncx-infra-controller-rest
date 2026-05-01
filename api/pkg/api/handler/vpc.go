@@ -186,13 +186,13 @@ func (cvh CreateVPCHandler) Handle(c echo.Context) error {
 
 	// check for name uniqueness for the tenant, ie, tenant cannot have another vpc with same name at the site
 	// TODO consider doing this with an advisory lock for correctness
-	vpcs, tot, err := vpcDAO.GetAll(ctx, nil, cdbm.VpcFilterInput{Name: &apiRequest.Name, InfrastructureProviderID: cdb.GetUUIDPtr(site.InfrastructureProviderID), TenantIDs: []uuid.UUID{tenant.ID}, SiteIDs: []uuid.UUID{site.ID}}, cdbp.PageInput{}, nil)
+	vpcs, tot, err := vpcDAO.GetAll(ctx, nil, cdbm.VpcFilterInput{Name: apiRequest.Metadata.Name, InfrastructureProviderID: cdb.GetUUIDPtr(site.InfrastructureProviderID), TenantIDs: []uuid.UUID{tenant.ID}, SiteIDs: []uuid.UUID{site.ID}}, cdbp.PageInput{}, nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("db error checking for name uniqueness of tenant vpc")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Vpc due to DB error", nil)
 	}
 	if tot > 0 {
-		logger.Warn().Str("tenantId", tenant.ID.String()).Str("name", apiRequest.Name).Msg("vpc with same name already exists for tenant")
+		logger.Warn().Str("tenantId", tenant.ID.String()).Str("name", *apiRequest.Metadata.Name).Msg("vpc with same name already exists for tenant")
 		return cutil.NewAPIErrorResponse(c, http.StatusConflict, "A Vpc with specified name already exists for Tenant", validation.Errors{
 			"id": errors.New(vpcs[0].ID.String()),
 		})
@@ -308,8 +308,8 @@ func (cvh CreateVPCHandler) Handle(c echo.Context) error {
 
 	// Labels support
 	var labels map[string]string
-	if apiRequest.Labels != nil {
-		labels = apiRequest.Labels
+	if apiRequest.Metadata.Labels != nil {
+		labels = apiRequest.Metadata.Labels
 	}
 
 	// Start a database transaction
@@ -325,8 +325,8 @@ func (cvh CreateVPCHandler) Handle(c echo.Context) error {
 	// Create VPC
 	vpcInput := cdbm.VpcCreateInput{
 		ID:                        apiRequest.ID,
-		Name:                      apiRequest.Name,
-		Description:               apiRequest.Description,
+		Name:                      *apiRequest.Metadata.Name,
+		Description:               apiRequest.Metadata.Description,
 		Org:                       org,
 		InfrastructureProviderID:  site.InfrastructureProviderID,
 		NetworkSecurityGroupID:    apiRequest.NetworkSecurityGroupID,
@@ -621,8 +621,8 @@ func (uvh UpdateVPCHandler) Handle(c echo.Context) error {
 
 	vpcDAO := cdbm.NewVpcDAO(uvh.dbSession)
 	// check for name uniqueness for the tenant, ie, tenant cannot have another vpc with same name at the site
-	if apiRequest.Name != nil && *apiRequest.Name != vpc.Name {
-		vpcs, tot, err := vpcDAO.GetAll(ctx, nil, cdbm.VpcFilterInput{Name: apiRequest.Name, InfrastructureProviderID: &vpc.InfrastructureProviderID, TenantIDs: []uuid.UUID{tenant.ID}, SiteIDs: []uuid.UUID{vpc.SiteID}}, cdbp.PageInput{}, nil)
+	if apiRequest.Metadata.Name != nil && *apiRequest.Metadata.Name != vpc.Name {
+		vpcs, tot, err := vpcDAO.GetAll(ctx, nil, cdbm.VpcFilterInput{Name: apiRequest.Metadata.Name, InfrastructureProviderID: &vpc.InfrastructureProviderID, TenantIDs: []uuid.UUID{tenant.ID}, SiteIDs: []uuid.UUID{vpc.SiteID}}, cdbp.PageInput{}, nil)
 		if err != nil {
 			logger.Error().Err(err).Msg("db error checking for name uniqueness of tenant vpc")
 			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Vpc due to DB error", nil)
@@ -665,8 +665,8 @@ func (uvh UpdateVPCHandler) Handle(c echo.Context) error {
 
 	// Labels support
 	var labels map[string]string
-	if apiRequest.Labels != nil {
-		labels = apiRequest.Labels
+	if apiRequest.Metadata.Labels != nil {
+		labels = apiRequest.Metadata.Labels
 	}
 
 	siteConfig := &cdbm.SiteConfig{}
@@ -757,8 +757,8 @@ func (uvh UpdateVPCHandler) Handle(c echo.Context) error {
 	// Update VPC
 	uvpcInput := cdbm.VpcUpdateInput{
 		VpcID:                  vpc.ID,
-		Name:                   apiRequest.Name,
-		Description:            apiRequest.Description,
+		Name:                   apiRequest.Metadata.Name,
+		Description:            apiRequest.Metadata.Description,
 		Labels:                 labels,
 		NetworkSecurityGroupID: nsgID,
 	}

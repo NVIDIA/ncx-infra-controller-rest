@@ -150,7 +150,7 @@ func TestAPINVLinkLogicalPartitionNew(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			got := NewAPINVLinkLogicalPartition(tc.dbNLP, tc.dbVpcs, tc.dbNLPInterfaces, tc.dbSds)
 			assert.Equal(t, tc.dbNLP.ID.String(), got.ID)
-			assert.Equal(t, tc.dbVpcs[0].Name, got.Vpcs[0].Name)
+			assert.Equal(t, tc.dbVpcs[0].Name, *got.Vpcs[0].Metadata.Name)
 		})
 	}
 }

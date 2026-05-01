@@ -78,16 +78,12 @@ func normalizeAPIVpcRoutingProfileFromSite(routingProfile string) string {
 type APIVpcCreateRequest struct {
 	// ID is the user-specified UUID of the VPC.
 	ID *uuid.UUID `json:"id"`
-	// Name is the name of the VPC
-	Name string `json:"name"`
-	// Description is the description of the VPC
-	Description *string `json:"description"`
+	// Carbide VPC object metadata
+	Metadata APICarbideObjectMetadata `json:"metadata"`
 	// SiteID is the ID of the Site
 	SiteID string `json:"siteId"`
 	// NetworkVirtualizationType is a VPC virtualization type
 	NetworkVirtualizationType *string `json:"networkVirtualizationType"`
-	// Labels is a key value objects
-	Labels map[string]string `json:"labels"`
 	// NetworkSecurityGroupID is the ID if a desired
 	// NSG to attach to the VPC
 	NetworkSecurityGroupID *string `json:"networkSecurityGroupId"`
@@ -107,15 +103,10 @@ type APIVpcCreateRequest struct {
 
 // Validate ensure the values passed in create request are acceptable
 func (ascr APIVpcCreateRequest) Validate() error {
+	if err := ascr.Metadata.ValidateOnCreate(); err != nil {
+		return err
+	}
 	err := validation.ValidateStruct(&ascr,
-		validation.Field(&ascr.Name,
-			validation.Required.Error(validationErrorStringLength),
-			validation.By(util.ValidateNameCharacters),
-			validation.Length(2, 256).Error(validationErrorStringLength)),
-		validation.Field(&ascr.Description,
-			validation.When(ascr.Description != nil,
-				validation.Length(0, 1024).Error(validationErrorDescriptionStringLength)),
-		),
 		validation.Field(&ascr.RoutingProfile,
 			validation.When(ascr.RoutingProfile != nil,
 				validation.Length(3, 64).Error("`routingProfile` must contain at least 3 characters and a maximum of 64 characters"),
@@ -163,21 +154,13 @@ func (ascr APIVpcCreateRequest) Validate() error {
 		}
 	}
 
-	if err := util.ValidateLabels(ascr.Labels); err != nil {
-		return err
-	}
-
 	return err
 }
 
 // APIVpcUpdateRequest captures the request data for updating a new VPC
 type APIVpcUpdateRequest struct {
-	// Name is the name of the VPC
-	Name *string `json:"name"`
-	// Description is the description of the VPC
-	Description *string `json:"description"`
-	// Labels is a key value objects
-	Labels map[string]string `json:"labels"`
+	// Carbide Object metadata
+	Metadata APICarbideObjectMetadata `json:"metadata"`
 	// NetworkSecurityGroupID is the ID if a desired
 	// NSG to attach to the VPC
 	NetworkSecurityGroupID *string `json:"networkSecurityGroupId"`
@@ -187,25 +170,7 @@ type APIVpcUpdateRequest struct {
 
 // Validate ensure the values passed in update request are acceptable
 func (asur APIVpcUpdateRequest) Validate() error {
-	err := validation.ValidateStruct(&asur,
-		validation.Field(&asur.Name,
-			validation.When(asur.Name != nil, validation.Required.Error(validationErrorStringLength)),
-			validation.When(asur.Name != nil, validation.By(util.ValidateNameCharacters)),
-			validation.When(asur.Name != nil, validation.Length(2, 256).Error(validationErrorStringLength))),
-		validation.Field(&asur.Description,
-			validation.When(asur.Description != nil, validation.Length(0, 1024).Error(validationErrorDescriptionStringLength)),
-		),
-	)
-
-	if err != nil {
-		return err
-	}
-
-	if err := util.ValidateLabels(asur.Labels); err != nil {
-		return err
-	}
-
-	return err
+	return asur.Metadata.ValidateOnUpdate()
 }
 
 // APIVpcVirtualizationUpdateRequest captures the request data for updating virtualization type for a give VPC
@@ -246,10 +211,8 @@ func (avvur APIVpcVirtualizationUpdateRequest) Validate(existingVpc *cdbm.Vpc) e
 type APIVpc struct {
 	// ID is the unique UUID v4 identifier of the VPC in Forge Cloud
 	ID string `json:"id"`
-	// Name is the name of the VPC
-	Name string `json:"name"`
-	// Description is the description of the VPC
-	Description *string `json:"description"`
+	// Carbide VPC Object metadata
+	Metadata APICarbideObjectMetadata `json:"metadata"`
 	// Org is the NGC organization ID of the infrastructure provider and the org the VPC belongs to
 	Org string `json:"org"`
 	// InfrastructureProviderID is the ID of the infrastructure provider who owns the site
@@ -268,8 +231,6 @@ type APIVpc struct {
 	NetworkVirtualizationType *string `json:"networkVirtualizationType"`
 	// ControllerVpcID is the ID of the corresponding VPC in Site Controller
 	ControllerVpcID *string `json:"controllerVpcId"`
-	// Labels is VPC labels specified by user
-	Labels map[string]string `json:"labels"`
 	// NVLinkLogicalPartitionID is the ID of the NVLinkLogicalPartition
 	NVLinkLogicalPartitionID *string `json:"nvLinkLogicalPartitionId"`
 	// NVLinkLogicalPartitionSummary is the summary of the NVLinkLogicalPartition
@@ -301,13 +262,11 @@ type APIVpc struct {
 func NewAPIVpc(dbVpc cdbm.Vpc, dbsds []cdbm.StatusDetail) APIVpc {
 	apivpc := APIVpc{
 		ID:                                     dbVpc.ID.String(),
-		Name:                                   dbVpc.Name,
-		Description:                            dbVpc.Description,
+		Metadata:                               NewAPICarbideObjectMetadataFromVpc(dbVpc),
 		Org:                                    dbVpc.Org,
 		InfrastructureProviderID:               util.GetUUIDPtrToStrPtr(&dbVpc.InfrastructureProviderID),
 		TenantID:                               util.GetUUIDPtrToStrPtr(&dbVpc.TenantID),
 		SiteID:                                 util.GetUUIDPtrToStrPtr(&dbVpc.SiteID),
-		Labels:                                 dbVpc.Labels,
 		Status:                                 dbVpc.Status,
 		NetworkSecurityGroupID:                 dbVpc.NetworkSecurityGroupID,
 		NetworkSecurityGroupPropagationDetails: NewAPINetworkSecurityGroupPropagationDetails(dbVpc.NetworkSecurityGroupPropagationDetails),
@@ -382,8 +341,8 @@ type APIVpcStats struct {
 type APIVpcSummary struct {
 	// ID is the unique UUID v4 identifier of the VPC in Forge Cloud
 	ID string `json:"id"`
-	// Name of the Vpc, only lowercase characters, digits, hyphens and cannot begin/end with hyphen
-	Name string `json:"name"`
+	// Carbide VPC Object metadata
+	Metadata APICarbideObjectMetadata `json:"metadata"`
 	// ControllerVpcID is the ID of the corresponding VPC in Site Controller
 	ControllerVpcID *string `json:"controllerVpcId"`
 	// Network virtualization type is a VPC virtualization type
@@ -396,7 +355,7 @@ type APIVpcSummary struct {
 func NewAPIVpcSummary(dbVpc *cdbm.Vpc) *APIVpcSummary {
 	apiVpcSummary := APIVpcSummary{
 		ID:                        dbVpc.ID.String(),
-		Name:                      dbVpc.Name,
+		Metadata:                  NewAPICarbideObjectMetadataFromVpc(*dbVpc),
 		NetworkVirtualizationType: dbVpc.NetworkVirtualizationType,
 		Status:                    dbVpc.Status,
 	}
