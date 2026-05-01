@@ -336,7 +336,7 @@ func (cvh CreateVPCHandler) Handle(c echo.Context) error {
 		RoutingProfile:            routingProfile,
 		NVLinkLogicalPartitionID:  defaultNvllPartitionId,
 		Labels:                    labels,
-		Status:                    cdbm.VpcStatusReady,
+		Status:                    cdbm.VpcStatusProvisioning,
 		CreatedBy:                 *dbUser,
 		Vni:                       apiRequest.Vni,
 	}
@@ -362,8 +362,8 @@ func (cvh CreateVPCHandler) Handle(c echo.Context) error {
 
 	// Create status detail
 	sdDAO := cdbm.NewStatusDetailDAO(cvh.dbSession)
-	ssd, err := sdDAO.CreateFromParams(ctx, tx, vpc.ID.String(), *cdb.GetStrPtr(cdbm.VpcStatusReady),
-		cdb.GetStrPtr("VPC successfully provisioned on Site"))
+	ssd, err := sdDAO.CreateFromParams(ctx, tx, vpc.ID.String(), cdbm.VpcStatusProvisioning,
+		cdb.GetStrPtr("VPC provisioning has been initiated on Site"))
 	if err != nil {
 		logger.Error().Err(err).Msg("error creating Status Detail DB entry")
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Status Detail for VPC", nil)
@@ -446,7 +446,9 @@ func (cvh CreateVPCHandler) Handle(c echo.Context) error {
 	logger.Info().Str("Workflow ID", wid).Msg("executed synchronous create VPC workflow")
 
 	// Block until the workflow has completed and returned success/error.
-	err = we.Get(ctx, nil)
+	controllerVpc := &cwssaws.Vpc{}
+
+	err = we.Get(ctx, controllerVpc)
 	if err != nil {
 		var timeoutErr *tp.TimeoutError
 		if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded || ctx.Err() != nil {
@@ -484,8 +486,39 @@ func (cvh CreateVPCHandler) Handle(c echo.Context) error {
 	}
 	// set committed so, deferred cleanup functions will do nothing
 	txCommitted = true
+
+	statusDetails := []cdbm.StatusDetail{*ssd}
+
+	// Make a best-effort attempt to return a response with the allocated VNI.
+	if controllerVpc.GetStatus() != nil {
+		activeVni := wutil.GetUint32PtrToIntPtr(controllerVpc.GetStatus().Vni)
+
+		uvpcInput := cdbm.VpcUpdateInput{
+			VpcID:     vpc.ID,
+			ActiveVni: activeVni,
+			Status:    cdb.GetStrPtr(cdbm.VpcStatusReady),
+		}
+		updatedVpc, err := vpcDAO.Update(ctx, nil, uvpcInput)
+		if err != nil {
+			logger.Error().Err(err).Msg("error while updating VPC DB entry for VNI")
+		} else {
+			// Update the vpc being returned if all went well.
+			vpc = updatedVpc
+
+			// Best effort create status detail
+			ssd, err = sdDAO.CreateFromParams(ctx, nil, vpc.ID.String(), cdbm.VpcStatusReady, cdb.GetStrPtr("VPC is ready for use"))
+			if err != nil {
+				logger.Error().Err(err).Msg("error creating Status Detail DB entry")
+			} else if ssd == nil {
+				logger.Error().Err(err).Msg("unexpected nil Status Detail returned from DB")
+			} else {
+				statusDetails = append(statusDetails, *ssd)
+			}
+		}
+	}
+
 	// Create response
-	apiVpc := model.NewAPIVpc(*vpc, []cdbm.StatusDetail{*ssd})
+	apiVpc := model.NewAPIVpc(*vpc, statusDetails)
 
 	logger.Info().Msg("finishing API handler")
 
