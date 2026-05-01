@@ -83,13 +83,16 @@ auth:
   # Option 1: Direct bearer token
   # token: eyJhbGciOi...
 
-  # Option 2: OIDC provider (e.g. Keycloak)
+  # Option 2: Auth script/token command
+  # token_command: /path/to/get-carbide-token.sh
+
+  # Option 3: OIDC provider (e.g. Keycloak)
   oidc:
     token_url: http://localhost:8080/realms/carbide-dev/protocol/openid-connect/token
     client_id: carbide-api
     client_secret: carbide-local-secret
 
-  # Option 3: NGC API key
+  # Option 4: NGC API key
   # api_key:
   #   authn_url: https://authn.nvidia.com/token
   #   key: nvapi-xxxx
@@ -102,6 +105,7 @@ Flags and environment variables override config values:
 | `--base-url` | `CARBIDE_BASE_URL` | API base URL |
 | `--org` | `CARBIDE_ORG` | Organization name |
 | `--token` | `CARBIDE_TOKEN` | Bearer token |
+| `--token-command`, `--auth-script` | `CARBIDE_TOKEN_COMMAND`, `CARBIDE_AUTH_SCRIPT` | Shell command/script that prints a bearer token |
 | `--token-url` | `CARBIDE_TOKEN_URL` | OIDC token endpoint URL |
 | `--keycloak-url` | `CARBIDE_KEYCLOAK_URL` | Keycloak base URL (constructs token-url) |
 | `--keycloak-realm` | `CARBIDE_KEYCLOAK_REALM` | Keycloak realm (default: `carbide-dev`) |
@@ -120,11 +124,14 @@ carbidecli --token-url https://auth.example.com/token login --username admin@exa
 # NGC API key
 carbidecli login --api-key nvapi-xxxx
 
+# Auth script/token command
+carbidecli --auth-script /path/to/get-carbide-token.sh login
+
 # Keycloak shorthand
 carbidecli --keycloak-url http://localhost:8080 login --username admin@example.com
 ```
 
-Tokens are saved to `~/.carbide/config.yaml` with auto-refresh for OIDC.
+Tokens are saved to `~/.carbide/config.yaml`. OIDC is refreshed when possible; TUI mode reruns the configured auth method after `401 Unauthorized` API responses and retries the request up to three times, logging each auth refresh/retry attempt.
 
 ## Usage
 

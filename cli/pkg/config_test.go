@@ -86,6 +86,16 @@ func TestGetAuthToken_Priority(t *testing.T) {
 	}
 }
 
+func TestHasTokenCommandConfig(t *testing.T) {
+	cfg := ConfigFile{Auth: ConfigAuth{TokenCommand: "printf token"}}
+	if !HasTokenCommandConfig(&cfg) {
+		t.Fatal("expected token command config")
+	}
+	if HasTokenCommandConfig(&ConfigFile{}) {
+		t.Fatal("empty config should not have token command config")
+	}
+}
+
 func TestHasOIDCConfig(t *testing.T) {
 	tests := []struct {
 		name string
