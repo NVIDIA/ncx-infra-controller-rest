@@ -72,6 +72,15 @@ const (
 	OperatingSystemAuthTypeBasic = "Basic"
 	// OperatingSystemAuthTypeBearer is the bearer image auth type
 	OperatingSystemAuthTypeBearer = "Bearer"
+
+	// OperatingSystemIpxeArtifactCacheStrategyCacheAsNeeded is the cache as needed strategy
+	OperatingSystemIpxeArtifactCacheStrategyCacheAsNeeded = "CacheAsNeeded"
+	// OperatingSystemIpxeArtifactCacheStrategyLocalOnly is the local only strategy
+	OperatingSystemIpxeArtifactCacheStrategyLocalOnly = "LocalOnly"
+	// OperatingSystemIpxeArtifactCacheStrategyCachedOnly is the cached only strategy
+	OperatingSystemIpxeArtifactCacheStrategyCachedOnly = "CachedOnly"
+	// OperatingSystemIpxeArtifactCacheStrategyRemoteOnly is the remote only strategy
+	OperatingSystemIpxeArtifactCacheStrategyRemoteOnly = "RemoteOnly"
 )
 
 var (
@@ -111,6 +120,20 @@ var (
 		ws.TenantState_TERMINATING:  OperatingSystemStatusDeleting,
 		ws.TenantState_FAILED:       OperatingSystemStatusError,
 	}
+
+	OperatingSystemIpxeArtifactCacheStrategyFromProtoMap = map[ws.IpxeTemplateArtifactCacheStrategy]string{
+		ws.IpxeTemplateArtifactCacheStrategy_CACHE_AS_NEEDED: OperatingSystemIpxeArtifactCacheStrategyCacheAsNeeded,
+		ws.IpxeTemplateArtifactCacheStrategy_LOCAL_ONLY:      OperatingSystemIpxeArtifactCacheStrategyLocalOnly,
+		ws.IpxeTemplateArtifactCacheStrategy_CACHED_ONLY:     OperatingSystemIpxeArtifactCacheStrategyCachedOnly,
+		ws.IpxeTemplateArtifactCacheStrategy_REMOTE_ONLY:     OperatingSystemIpxeArtifactCacheStrategyRemoteOnly,
+	}
+
+	OperatingSystemIpxeArtifactCacheStrategyToProtoMap = map[string]ws.IpxeTemplateArtifactCacheStrategy{
+		OperatingSystemIpxeArtifactCacheStrategyCacheAsNeeded: ws.IpxeTemplateArtifactCacheStrategy_CACHE_AS_NEEDED,
+		OperatingSystemIpxeArtifactCacheStrategyLocalOnly:     ws.IpxeTemplateArtifactCacheStrategy_LOCAL_ONLY,
+		OperatingSystemIpxeArtifactCacheStrategyCachedOnly:    ws.IpxeTemplateArtifactCacheStrategy_CACHED_ONLY,
+		OperatingSystemIpxeArtifactCacheStrategyRemoteOnly:    ws.IpxeTemplateArtifactCacheStrategy_REMOTE_ONLY,
+	}
 )
 
 // IsIPXEType returns true if the given OS type is any iPXE variant (raw script or templated).
@@ -131,15 +154,24 @@ func (osip *OperatingSystemIpxeParameter) FromProto(protoParam *ws.IpxeTemplateP
 	osip.Value = protoParam.Value
 }
 
+// ToProto converts an OperatingSystemIpxeParameter to a proto IpxeTemplateParameter
+func (osip *OperatingSystemIpxeParameter) ToProto() *ws.IpxeTemplateParameter {
+	return &ws.IpxeTemplateParameter{
+		Name:  osip.Name,
+		Value: osip.Value,
+	}
+}
+
 // OperatingSystemIpxeArtifact holds a single iPXE artifact descriptor (stored as JSONB).
 // These are only populated for iPXE-based OS definitions synced from carbide-core.
 type OperatingSystemIpxeArtifact struct {
 	Name          string  `json:"name"`
 	URL           string  `json:"url"`
-	SHA           *string `json:"sha,omitempty"`
-	AuthType      *string `json:"authType,omitempty"`
-	AuthToken     *string `json:"authToken,omitempty"`
+	SHA           *string `json:"sha"`
+	AuthType      *string `json:"authType"`
+	AuthToken     *string `json:"authToken"`
 	CacheStrategy string  `json:"cacheStrategy"`
+	CachedURL     *string `json:"cachedUrl"`
 }
 
 // FromProto converts a proto IpxeTemplateArtifact to an OperatingSystemIpxeArtifact
@@ -149,7 +181,26 @@ func (osia *OperatingSystemIpxeArtifact) FromProto(protoArtifact *ws.IpxeTemplat
 	osia.SHA = protoArtifact.Sha
 	osia.AuthType = protoArtifact.AuthType
 	osia.AuthToken = protoArtifact.AuthToken
-	osia.CacheStrategy = protoArtifact.CacheStrategy.String()
+
+	cacheStrategy := OperatingSystemIpxeArtifactCacheStrategyFromProtoMap[protoArtifact.CacheStrategy]
+	if cacheStrategy == "" {
+		cacheStrategy = OperatingSystemIpxeArtifactCacheStrategyCacheAsNeeded
+	}
+	osia.CacheStrategy = cacheStrategy
+	osia.CachedURL = protoArtifact.CachedUrl
+}
+
+// ToProto converts an OperatingSystemIpxeArtifact to a proto IpxeTemplateArtifact
+func (osia *OperatingSystemIpxeArtifact) ToProto() *ws.IpxeTemplateArtifact {
+	return &ws.IpxeTemplateArtifact{
+		Name:          osia.Name,
+		Url:           osia.URL,
+		Sha:           osia.SHA,
+		AuthType:      osia.AuthType,
+		AuthToken:     osia.AuthToken,
+		CacheStrategy: OperatingSystemIpxeArtifactCacheStrategyToProtoMap[osia.CacheStrategy],
+		CachedUrl:     osia.CachedURL,
+	}
 }
 
 // OperatingSystem describes the attributes of the operating system

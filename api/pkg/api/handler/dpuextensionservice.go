@@ -293,6 +293,7 @@ func (cdesh CreateDpuExtensionServiceHandler) Handle(c echo.Context) error {
 	if err != nil {
 		var timeoutErr *tp.TimeoutError
 		if errors.As(err, &timeoutErr) {
+			// TODO: Terminate the workflow
 			logger.Error().Err(err).Msg("timed out executing DPU Extension Service creation workflow on Site")
 			return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Timed out executing DPU Extension Service creation workflow on Site: %s", err), nil)
 		}

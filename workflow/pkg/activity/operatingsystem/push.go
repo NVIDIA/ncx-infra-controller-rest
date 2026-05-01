@@ -42,6 +42,8 @@ import (
 	cwutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
 )
 
+// TODO: Retire these activities and workflows
+
 // ManageOperatingSystemPush is an activity wrapper for pushing Operating System
 // changes (create/update/delete) from REST to carbide-core via per-site workflows.
 type ManageOperatingSystemPush struct {

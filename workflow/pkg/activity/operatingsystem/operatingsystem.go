@@ -21,21 +21,28 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
+	"go.temporal.io/sdk/client"
+	tp "go.temporal.io/sdk/temporal"
 
 	cdb "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	cdbp "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	swe "github.com/NVIDIA/ncx-infra-controller-rest/site-workflow/pkg/error"
 
 	sc "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/client/site"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/queue"
+	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/util"
 
 	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 
-	cwutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
+	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
 )
 
 const (
@@ -231,7 +238,7 @@ func (mos ManageOperatingSystem) UpdateOsImagesInDB(ctx context.Context, siteID 
 			}
 		} else {
 			// Was this created within inventory receipt interval? If so, we may be processing an older inventory
-			if time.Since(ossa.Created) < cwutil.InventoryReceiptInterval {
+			if time.Since(ossa.Created) < cutil.InventoryReceiptInterval {
 				continue
 			}
 
@@ -512,14 +519,14 @@ func (mos ManageOperatingSystem) UpdateOperatingSystemsInDB(ctx context.Context,
 
 		coreUpdated, _ := time.Parse(time.RFC3339, reportedOS.Updated)
 
-		ipxeTemplateParams := make([]cdbm.OperatingSystemIpxeParameter, 0, len(reportedOS.IpxeTemplateParameters))
+		ipxeTemplateParams := []cdbm.OperatingSystemIpxeParameter{}
 		for _, param := range reportedOS.IpxeTemplateParameters {
 			ipxeTemplateParam := cdbm.OperatingSystemIpxeParameter{}
 			ipxeTemplateParam.FromProto(param)
 			ipxeTemplateParams = append(ipxeTemplateParams, ipxeTemplateParam)
 		}
 
-		ipxeTemplateArtifacts := make([]cdbm.OperatingSystemIpxeArtifact, 0, len(reportedOS.IpxeTemplateArtifacts))
+		ipxeTemplateArtifacts := []cdbm.OperatingSystemIpxeArtifact{}
 		for _, artifact := range reportedOS.IpxeTemplateArtifacts {
 			ipxeTemplateArtifact := cdbm.OperatingSystemIpxeArtifact{}
 			ipxeTemplateArtifact.FromProto(artifact)
@@ -820,6 +827,336 @@ func (mos ManageOperatingSystem) UpdateOperatingSystemsInDB(ctx context.Context,
 	logger.Info().Msg("Completed activity")
 
 	return nil
+}
+
+// CreateOrUpdateOperatingSystemViaSiteAgent is Temporal activity to create or update an Operating System via Site Agent
+func (mos ManageOperatingSystem) CreateOrUpdateOperatingSystemViaSiteAgent(ctx context.Context, siteID uuid.UUID, operatingSystemID uuid.UUID) error {
+	logger := log.With().Str("Activity", "CreateOrUpdateOperatingSystemViaSiteAgent").Str("OperatingSystemID", operatingSystemID.String()).Logger()
+	logger.Info().Msg("Starting activity")
+
+	osDAO := cdbm.NewOperatingSystemDAO(mos.dbSession)
+	os, err := osDAO.GetByID(ctx, nil, operatingSystemID, nil)
+	if err != nil {
+		if errors.Is(err, cdb.ErrDoesNotExist) {
+			logger.Warn().Err(err).Msg("Received create/update request for unknown or deleted Operating System")
+			return nil
+		}
+		logger.Error().Err(err).Msg("Failed to retrieve Operating System, DB error")
+		return err
+	}
+
+	ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(mos.dbSession)
+
+	ossa, err := ossaDAO.GetByOperatingSystemIDAndSiteID(ctx, nil, operatingSystemID, siteID, nil)
+	if err != nil {
+		if errors.Is(err, cdb.ErrDoesNotExist) {
+			logger.Warn().Err(err).Msg("Operating System Site Association does not exist")
+			return nil
+		}
+		logger.Error().Err(err).Msg("Failed to retrieve Operating System Site Association, DB error")
+		return err
+	}
+
+	if ossa.Status == cdbm.OperatingSystemSiteAssociationStatusDeleting {
+		logger.Warn().Msg("Operating System is being deleted, skipping create/update")
+		return nil
+	}
+
+	isOperatingSystemCreated := cdb.GetBoolPtr(false)
+	if !ossa.IsMissingOnSite {
+		isOperatingSystemCreated, err = mos.IsOperatingSystemCreatedOnSite(ctx, nil, ossa.ID)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to determine if Operating System has already been created on Site")
+			return err
+		}
+	}
+
+	stc, err := mos.siteClientPool.GetClientByID(ossa.SiteID)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to retrieve Temporal client for Site")
+		return err
+	}
+
+	var wr client.WorkflowRun
+	var workflowMethod string
+
+	workflowOptions := client.StartWorkflowOptions{
+		TaskQueue: queue.SiteTaskQueue,
+	}
+
+	newCtxWithTimeout, cancel := context.WithTimeout(context.Background(), cutil.WorkflowContextTimeout)
+	defer cancel()
+
+	if *isOperatingSystemCreated {
+		workflowMethod = "update"
+		workflowOptions.ID = "operating-system-update-" + os.ID.String()
+
+		updateRequest := &cwssaws.UpdateOperatingSystemRequest{
+			Id:                         &cwssaws.OperatingSystemId{Value: os.ID.String()},
+			Name:                       &os.Name,
+			Description:                os.Description,
+			IsActive:                   &os.IsActive,
+			AllowOverride:              &os.AllowOverride,
+			PhoneHomeEnabled:           &os.PhoneHomeEnabled,
+			UserData:                   os.UserData,
+			IpxeScript:                 os.IpxeScript,
+			IpxeTemplateDefinitionHash: os.IpxeTemplateDefinitionHash,
+		}
+
+		if os.IpxeTemplateId != nil {
+			updateRequest.IpxeTemplateId = &cwssaws.IpxeTemplateId{
+				Value: *os.IpxeTemplateId,
+			}
+		}
+
+		if len(os.IpxeTemplateParameters) > 0 {
+			updateRequest.IpxeTemplateParameters = &cwssaws.IpxeTemplateParameters{
+				Items: []*cwssaws.IpxeTemplateParameter{},
+			}
+
+			for _, ipxeTemplateParameter := range os.IpxeTemplateParameters {
+				updateRequest.IpxeTemplateParameters.Items = append(updateRequest.IpxeTemplateParameters.Items, ipxeTemplateParameter.ToProto())
+			}
+		}
+
+		if len(os.IpxeTemplateArtifacts) > 0 {
+			updateRequest.IpxeTemplateArtifacts = &cwssaws.IpxeTemplateArtifacts{
+				Items: []*cwssaws.IpxeTemplateArtifact{},
+			}
+
+			for _, ipxeTemplateArtifact := range os.IpxeTemplateArtifacts {
+				updateRequest.IpxeTemplateArtifacts.Items = append(updateRequest.IpxeTemplateArtifacts.Items, ipxeTemplateArtifact.ToProto())
+			}
+		}
+
+		logger.Info().Msg("Triggering synchronous UpdateOperatingSystem workflow")
+
+		wr, err = stc.ExecuteWorkflow(newCtxWithTimeout, workflowOptions, "UpdateOperatingSystem", updateRequest)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to schedule synchronous UpdateOperatingSystem workflow")
+			return err
+		}
+	} else {
+		workflowMethod = "create"
+		workflowOptions.ID = "operating-system-create-" + os.ID.String()
+
+		createRequest := &cwssaws.CreateOperatingSystemRequest{
+			Id:                   &cwssaws.OperatingSystemId{Value: os.ID.String()},
+			Name:                 os.Name,
+			Description:          os.Description,
+			TenantOrganizationId: os.Org,
+			IsActive:             os.IsActive,
+			AllowOverride:        os.AllowOverride,
+			PhoneHomeEnabled:     os.PhoneHomeEnabled,
+			UserData:             os.UserData,
+			IpxeScript:           os.IpxeScript,
+		}
+
+		if os.IpxeTemplateId != nil {
+			createRequest.IpxeTemplateId = &cwssaws.IpxeTemplateId{
+				Value: *os.IpxeTemplateId,
+			}
+		}
+
+		if len(os.IpxeTemplateParameters) > 0 {
+			createRequest.IpxeTemplateParameters = []*cwssaws.IpxeTemplateParameter{}
+
+			for _, ipxeTemplateParameter := range os.IpxeTemplateParameters {
+				createRequest.IpxeTemplateParameters = append(createRequest.IpxeTemplateParameters, ipxeTemplateParameter.ToProto())
+			}
+		}
+
+		if len(os.IpxeTemplateArtifacts) > 0 {
+			createRequest.IpxeTemplateArtifacts = []*cwssaws.IpxeTemplateArtifact{}
+
+			for _, ipxeTemplateArtifact := range os.IpxeTemplateArtifacts {
+				createRequest.IpxeTemplateArtifacts = append(createRequest.IpxeTemplateArtifacts, ipxeTemplateArtifact.ToProto())
+			}
+		}
+
+		logger.Info().Msg("Triggering synchronous CreateOperatingSystem workflow")
+
+		wr, err = stc.ExecuteWorkflow(newCtxWithTimeout, workflowOptions, "CreateOperatingSystem", createRequest)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to schedule synchronous CreateOperatingSystem workflow")
+			return err
+		}
+	}
+
+	wid := wr.GetID()
+
+	var status, statusMessage string
+
+	err = wr.Get(ctx, nil)
+	if err != nil {
+		var timeoutErr *tp.TimeoutError
+		if errors.As(err, &timeoutErr) || err == context.DeadlineExceeded {
+			logger.Error().Err(err).Msgf("failed to %s Operating System, timeout occurred executing workflow on Site.", workflowMethod)
+
+			// Create a new context deadlines
+			newctx, newcancel := context.WithTimeout(context.Background(), cutil.WorkflowContextNewAfterTimeout)
+			defer newcancel()
+
+			// Initiate termination workflow
+			serr := stc.TerminateWorkflow(newctx, wid, "", fmt.Sprintf("Timeout occurred executing %s Operating System workflow", workflowMethod))
+			if serr != nil {
+				logger.Error().Err(serr).Msgf("Failed to execute terminate Temporal workflow for %s Operating System", workflowMethod)
+			}
+			logger.Info().Str("Workflow ID", wid).Msgf("Initiated terminate synchronous %s Operating System workflow", workflowMethod)
+
+			status = cdbm.OperatingSystemSiteAssociationStatusError
+			statusMessage = fmt.Sprintf("Failed to %s Operating System, timeout occurred executing workflow on Site.", workflowMethod)
+
+			// Clear error so function returns nil after updating status
+			err = nil
+		} else if strings.Contains(err.Error(), util.ErrMsgSiteControllerDuplicateEntryFound) {
+			// Handle duplicate key error - record error and fail workflow for retry, IsOperatingSystemCreatedOnSite relies on this error
+			logger.Warn().Err(err).Msg("Operating System already exists on Site, recording error and failing workflow to retry")
+
+			status = cdbm.OperatingSystemSiteAssociationStatusError
+			statusMessage = fmt.Sprintf("Operating System already exists on Site: %s", util.ErrMsgSiteControllerDuplicateEntryFound)
+
+			_ = mos.updateOperatingSystemSiteAssociationStatusInDB(ctx, nil, ossa.ID, &status, &statusMessage)
+
+			return fmt.Errorf("Operating System creation failed, already present on Site, workflow will be retried as update: %w", err)
+		} else {
+			// Other errors
+			status = cdbm.OperatingSystemSiteAssociationStatusError
+			statusMessage = fmt.Sprintf("Failed to execute %s Operating System workflow via Site Agent", workflowMethod)
+		}
+	}
+
+	// Log status detail regardless of success or failure
+	_ = mos.updateOperatingSystemSiteAssociationStatusInDB(ctx, nil, ossa.ID, &status, &statusMessage)
+
+	// If workflow wasn't successful, return error to retry workflow
+	if err != nil {
+		logger.Error().Err(err).Msgf("Failed to execute synchronous %s Operating System workflow on Site", workflowMethod)
+		return err
+	}
+
+	// Create/update was successful
+	if wr != nil {
+		logger.Info().Str("Workflow ID", wr.GetID()).Msgf("Successfully executed %s Operating System workflow on Site", workflowMethod)
+	}
+
+	logger.Info().Msg("completed activity")
+
+	return nil
+}
+
+// DeleteOperatingSystemViaSiteAgent is Temporal activity to delete an Operating System via Site Agent
+func (mos ManageOperatingSystem) DeleteOperatingSystemViaSiteAgent(ctx context.Context, siteID uuid.UUID, operatingSystemID uuid.UUID) error {
+	logger := log.With().Str("Activity", "DeleteOperatingSystemViaSiteAgent").Str("OperatingSystemID", operatingSystemID.String()).Logger()
+	logger.Info().Msg("Starting activity")
+
+	osDAO := cdbm.NewOperatingSystemDAO(mos.dbSession)
+	os, err := osDAO.GetByID(ctx, nil, operatingSystemID, nil)
+	if err != nil {
+		if errors.Is(err, cdb.ErrDoesNotExist) {
+			logger.Warn().Err(err).Msg("Received deletion request for unknown or deleted Operating System")
+			return nil
+		}
+		logger.Error().Err(err).Msg("Failed to retrieve Operating System, DB error")
+		return err
+	}
+
+	ossaDAO := cdbm.NewOperatingSystemSiteAssociationDAO(mos.dbSession)
+
+	ossa, err := ossaDAO.GetByOperatingSystemIDAndSiteID(ctx, nil, operatingSystemID, siteID, nil)
+	if err != nil {
+		if errors.Is(err, cdb.ErrDoesNotExist) {
+			logger.Warn().Err(err).Msg("Operating System Site Association does not exist")
+			return nil
+		}
+		logger.Error().Err(err).Msg("Failed to retrieve Operating System Site Association, DB error")
+		return err
+	}
+
+	// Start a transaction
+	tx, err := cdb.BeginTx(ctx, mos.dbSession, &sql.TxOptions{})
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to begin transaction")
+		return err
+	}
+	defer tx.Rollback()
+
+	// Delete the Operating System Site Association
+	err = ossaDAO.Delete(ctx, tx, ossa.ID)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to delete Operating System Site Association, DB error")
+		return err
+	}
+
+	deleteRequest := &cwssaws.DeleteOperatingSystemRequest{
+		Id: &cwssaws.OperatingSystemId{Value: os.ID.String()},
+	}
+
+	stc, err := mos.siteClientPool.GetClientByID(ossa.SiteID)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to retrieve Temporal client for Site")
+		return err
+	}
+
+	workflowOptions := client.StartWorkflowOptions{
+		ID:        "operating-system-delete-" + os.ID.String(),
+		TaskQueue: queue.SiteTaskQueue,
+	}
+
+	logger.Info().Msg("Triggering synchronous DeleteOperatingSystem workflow")
+
+	we, werr := stc.ExecuteWorkflow(ctx, workflowOptions, "DeleteOperatingSystem", deleteRequest)
+	if werr != nil {
+		logger.Error().Err(werr).Msg("Failed to trigger synchronous DeleteOperatingSystem workflow")
+		return err
+	}
+
+	werr = we.Get(ctx, nil)
+	if werr != nil {
+		var applicationErr *tp.ApplicationError
+		if errors.As(werr, &applicationErr) && applicationErr.Type() == swe.ErrTypeCarbideObjectNotFound {
+			logger.Warn().Msg("Opearting System was not found on Site, treating as success")
+			werr = nil
+		}
+	}
+	if werr != nil {
+		logger.Error().Err(werr).Msg("Failed to execute synchronous DeleteOperatingSystem workflow")
+		return err
+	}
+
+	// Commit transaction
+	err = tx.Commit()
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to commit transaction after synchronous DeleteOperatingSystem workflow on site")
+		return err
+	}
+
+	return nil
+}
+
+// IsOperatingSystemCreatedOnSite is helper function to get if operating system created or not
+func (mos ManageOperatingSystem) IsOperatingSystemCreatedOnSite(ctx context.Context, tx *cdb.Tx, operatingSystemSiteAssociationID uuid.UUID) (*bool, error) {
+	ossaDAO := cdbm.NewStatusDetailDAO(mos.dbSession)
+
+	ossasds, _, err := ossaDAO.GetAllByEntityID(ctx, tx, operatingSystemSiteAssociationID.String(), nil, cdb.GetIntPtr(cdbp.TotalLimit), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, ossad := range ossasds {
+		// If it was synced at some point, then it should exist on Site
+		if ossad.Status == cdbm.OperatingSystemSiteAssociationStatusSynced {
+			return cdb.GetBoolPtr(true), nil
+		}
+
+		// If we have an error suggesting violation of unique constraint, then it should exist on Site
+		if ossad.Status == cdbm.OperatingSystemSiteAssociationStatusError && strings.Contains(*ossad.Message, util.ErrMsgSiteControllerDuplicateEntryFound) {
+			return cdb.GetBoolPtr(true), nil
+		}
+	}
+
+	// If we have not seen it Synced or with the integrity error, then it does not exist on Site
+	return cdb.GetBoolPtr(false), nil
 }
 
 // NewManageOperatingSystem returns a new ManageOperatingSystem activity

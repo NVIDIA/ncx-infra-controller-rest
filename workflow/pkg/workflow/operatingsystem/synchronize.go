@@ -40,15 +40,14 @@ const (
 	SyncOperationDelete = "Delete"
 )
 
-// SynchronizeOperatingSystem is a cloud-namespace Temporal workflow that propagates
-// Operating System changes (create/update/delete) to all associated sites asynchronously.
-func SynchronizeOperatingSystem(ctx workflow.Context, osID uuid.UUID, operation string) error {
-	logger := log.With().Str("Workflow", "SynchronizeOperatingSystem").
-		Str("OS ID", osID.String()).Str("Operation", operation).Logger()
+// CreateOrUpdateOperatingSystemByID is a Temporal workflow that creates or updates an Operating System by ID via Site Agent
+func CreateOrUpdateOperatingSystemByID(ctx workflow.Context, siteID uuid.UUID, operatingSystemID uuid.UUID) error {
+	logger := log.With().Str("Workflow", "CreateOrUpdateOperatingSystemByID").
+		Str("Site ID", siteID.String()).Str("OperatingSystemID", operatingSystemID.String()).Logger()
 
 	logger.Info().Msg("starting workflow")
 
-	retrypolicy := &temporal.RetryPolicy{
+	retryPolicy := &temporal.RetryPolicy{
 		InitialInterval:    2 * time.Second,
 		BackoffCoefficient: 2.0,
 		MaximumInterval:    2 * time.Minute,
@@ -56,16 +55,16 @@ func SynchronizeOperatingSystem(ctx workflow.Context, osID uuid.UUID, operation 
 	}
 	options := workflow.ActivityOptions{
 		StartToCloseTimeout: 5 * time.Minute,
-		RetryPolicy:         retrypolicy,
+		RetryPolicy:         retryPolicy,
 	}
 
 	ctx = workflow.WithActivityOptions(ctx, options)
 
-	var osPushManager osActivity.ManageOperatingSystemPush
+	var osManager osActivity.ManageOperatingSystem
 
-	err := workflow.ExecuteActivity(ctx, osPushManager.SynchronizeOperatingSystemToSites, osID, operation).Get(ctx, nil)
+	err := workflow.ExecuteActivity(ctx, osManager.CreateOrUpdateOperatingSystemViaSiteAgent, siteID, operatingSystemID).Get(ctx, nil)
 	if err != nil {
-		logger.Warn().Err(err).Msg("failed to execute activity: SynchronizeOperatingSystemToSites")
+		logger.Error().Err(err).Msg("failed to execute activity: CreateOrUpdateOperatingSystemViaSiteAgent")
 		return err
 	}
 
@@ -74,21 +73,21 @@ func SynchronizeOperatingSystem(ctx workflow.Context, osID uuid.UUID, operation 
 	return nil
 }
 
-// ExecuteSynchronizeOperatingSystemWorkflow triggers the SynchronizeOperatingSystem workflow
-// asynchronously on the cloud task queue. The handler does not wait for completion.
-func ExecuteSynchronizeOperatingSystemWorkflow(ctx context.Context, tc client.Client, osID uuid.UUID, operation string) (*string, error) {
+// ExecuteCreateOrUpdateOperatingSystemByIDWorkflow triggers the CreateOrUpdateOperatingSystemByID workflow
+func ExecuteCreateOrUpdateOperatingSystemByIDWorkflow(ctx context.Context, tc client.Client, siteID uuid.UUID, operatingSystemID uuid.UUID) (*string, error) {
 	workflowOptions := client.StartWorkflowOptions{
-		ID:                    "synchronize-operating-system-" + osID.String() + "-" + operation,
+		ID:                    "operating-system-create-or-update-by-id-" + siteID.String() + "-" + operatingSystemID.String(),
 		TaskQueue:             queue.CloudTaskQueue,
 		WorkflowIDReusePolicy: temporalEnums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
 	}
 
-	we, err := tc.ExecuteWorkflow(ctx, workflowOptions, SynchronizeOperatingSystem, osID, operation)
+	we, err := tc.ExecuteWorkflow(ctx, workflowOptions, CreateOrUpdateOperatingSystemByID, siteID, operatingSystemID)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to execute SynchronizeOperatingSystem workflow")
+		log.Error().Err(err).Msg("failed to execute CreateOrUpdateOperatingSystemByID workflow")
 		return nil, err
 	}
 
 	wid := we.GetID()
+
 	return &wid, nil
 }
