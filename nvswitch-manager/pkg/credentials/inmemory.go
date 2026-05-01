@@ -20,6 +20,7 @@ package credentials
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"sync"
 
@@ -86,6 +87,10 @@ func (m *InMemoryCredentialManager) GetBMC(ctx context.Context, mac net.Hardware
 // PutBMC stores the BMC credential for mac. If an identical entry exists, this is a no-op.
 // If a different entry exists, the new value overwrites (with a warning log).
 func (m *InMemoryCredentialManager) PutBMC(ctx context.Context, mac net.HardwareAddr, cred *credential.Credential) error {
+	if cred == nil {
+		return fmt.Errorf("BMC credential for %s is nil", mac)
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	key := m.bmcKey(mac)
@@ -102,6 +107,10 @@ func (m *InMemoryCredentialManager) PutBMC(ctx context.Context, mac net.Hardware
 
 // PatchBMC updates the BMC credential for mac (replaces current value).
 func (m *InMemoryCredentialManager) PatchBMC(ctx context.Context, mac net.HardwareAddr, cred *credential.Credential) error {
+	if cred == nil {
+		return fmt.Errorf("BMC credential for %s is nil", mac)
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	key := m.bmcKey(mac)
@@ -144,6 +153,10 @@ func (m *InMemoryCredentialManager) GetNVOS(ctx context.Context, mac net.Hardwar
 // PutNVOS stores the NVOS credential for mac. If an identical entry exists, this is a no-op.
 // If a different entry exists, the new value overwrites (with a warning log).
 func (m *InMemoryCredentialManager) PutNVOS(ctx context.Context, mac net.HardwareAddr, cred *credential.Credential) error {
+	if cred == nil {
+		return fmt.Errorf("NVOS credential for %s is nil", mac)
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	key := m.nvosKey(mac)
@@ -160,6 +173,10 @@ func (m *InMemoryCredentialManager) PutNVOS(ctx context.Context, mac net.Hardwar
 
 // PatchNVOS updates the NVOS credential for mac (replaces current value).
 func (m *InMemoryCredentialManager) PatchNVOS(ctx context.Context, mac net.HardwareAddr, cred *credential.Credential) error {
+	if cred == nil {
+		return fmt.Errorf("NVOS credential for %s is nil", mac)
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	key := m.nvosKey(mac)

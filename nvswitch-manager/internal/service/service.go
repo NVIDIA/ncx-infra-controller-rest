@@ -56,7 +56,10 @@ type Service struct {
 func New(ctx context.Context, c Config) (*Service, error) {
 	// Connect to database first if configured (needed for persistent registry)
 	var db *bun.DB
-	if c.DataStoreType == nvswitchmanager.DatastoreTypePersistent && c.DBConf.Host != "" {
+	if c.DataStoreType == nvswitchmanager.DatastoreTypePersistent {
+		if c.DBConf.Host == "" {
+			return nil, fmt.Errorf("DB host is required for persistent mode")
+		}
 		pg, err := postgres.New(ctx, c.DBConf)
 		if err != nil {
 			return nil, fmt.Errorf("database connection required for persistent mode: %w", err)

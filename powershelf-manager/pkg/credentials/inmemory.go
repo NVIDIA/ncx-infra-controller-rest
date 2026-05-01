@@ -19,6 +19,7 @@ package credentials
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"sync"
 
@@ -73,6 +74,10 @@ func (m *InMemoryCredentialManager) Get(ctx context.Context, mac net.HardwareAdd
 // Put stores the credential for mac. If an identical entry exists, this is a no-op.
 // If a different entry exists, the new value overwrites (with a warning log).
 func (m *InMemoryCredentialManager) Put(ctx context.Context, mac net.HardwareAddr, cred *credential.Credential) error {
+	if cred == nil {
+		return fmt.Errorf("credential for %s is nil", mac)
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	key := mac.String()
@@ -89,6 +94,10 @@ func (m *InMemoryCredentialManager) Put(ctx context.Context, mac net.HardwareAdd
 
 // Patch updates the credential for mac (replaces current value).
 func (m *InMemoryCredentialManager) Patch(ctx context.Context, mac net.HardwareAddr, cred *credential.Credential) error {
+	if cred == nil {
+		return fmt.Errorf("credential for %s is nil", mac)
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	key := mac.String()

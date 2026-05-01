@@ -422,6 +422,22 @@ func (s *NVSwitchManagerServerImpl) QueueUpdates(ctx context.Context, req *pb.Qu
 		return nil, status.Error(codes.Unavailable, "firmware manager not initialized")
 	}
 
+	// switch_uuids and targets are mutually exclusive: a request must populate
+	// exactly one. Allowing both would risk queuing duplicate updates for any
+	// device whose UUID is in switch_uuids and whose FirmwareTarget is in
+	// targets, since the handler does not deduplicate across the two lists.
+	// Empty requests are rejected as well — almost certainly a client bug.
+	hasUUIDs := len(req.SwitchUuids) > 0
+	hasTargets := len(req.Targets) > 0
+	switch {
+	case !hasUUIDs && !hasTargets:
+		return nil, status.Error(codes.InvalidArgument,
+			"request must populate either switch_uuids or targets")
+	case hasUUIDs && hasTargets:
+		return nil, status.Error(codes.InvalidArgument,
+			"request must populate only one of switch_uuids or targets, not both")
+	}
+
 	// Convert proto components to domain components
 	var components []nvswitch.Component
 	for _, c := range req.Components {
@@ -454,6 +470,14 @@ func (s *NVSwitchManagerServerImpl) QueueUpdates(ctx context.Context, req *pb.Qu
 
 	// Direct path: auto-register unregistered targets, then queue updates
 	for _, target := range req.Targets {
+		if target == nil {
+			results = append(results, &pb.QueueUpdateResult{
+				Status: pb.StatusCode_INVALID_ARGUMENT,
+				Error:  "target is nil",
+			})
+			continue
+		}
+
 		result := &pb.QueueUpdateResult{
 			BmcIp: target.BmcIp,
 		}

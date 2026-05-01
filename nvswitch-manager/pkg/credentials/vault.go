@@ -43,6 +43,12 @@ const bmcCredentialSuffix = "root"
 const nvosCredentialPath = mountPath + "/data/switch_nvos"
 const nvosCredentialSuffix = "admin"
 
+// errCredentialNotFound is the sentinel returned by get when a vault path
+// holds no secret. It lets Put* distinguish "definitely absent → safe to
+// write" from "couldn't determine state → log and write anyway", which is
+// important to avoid silently overwriting on transient Vault read failures.
+var errCredentialNotFound = errors.New("credential not found")
+
 // VaultConfig configures access to Vault (address and token). The token should be scoped minimally for KV operations.
 type VaultConfig struct {
 	Address string
@@ -157,7 +163,7 @@ func (m *VaultCredentialManager) get(ctx context.Context, key string) (*credenti
 		return nil, fmt.Errorf("vault read at %q: %w", key, err)
 	}
 	if secret == nil || secret.Data == nil {
-		return nil, fmt.Errorf("credential not found at vault path %q", key)
+		return nil, fmt.Errorf("vault path %q: %w", key, errCredentialNotFound)
 	}
 
 	credData, ok := secret.Data["data"].(map[string]interface{})
@@ -229,16 +235,40 @@ func (m *VaultCredentialManager) GetBMC(ctx context.Context, mac net.HardwareAdd
 	return m.get(ctx, m.getBMCCredentialKey(mac))
 }
 
-// PutBMC writes BMC credentials to Vault. If an entry already exists and matches,
-// this is a no-op. If an entry exists but differs, an error is returned (use PatchBMC to overwrite).
+// shouldSkipWrite reads the existing credential at key and decides whether
+// the caller can short-circuit the write. Returns true only when an identical
+// credential is already stored (idempotent re-register). For the differ and
+// read-failure cases it logs a warning and returns false so the caller
+// proceeds with an unconditional overwrite — matching the in-memory
+// CredentialManager's upsert semantics.
+//
+// kind is "BMC" or "NVOS" purely for log readability; mac is logged as the
+// MAC of the registering device.
+func (m *VaultCredentialManager) shouldSkipWrite(ctx context.Context, key, kind string, mac net.HardwareAddr, cred *credential.Credential) bool {
+	existing, err := m.get(ctx, key)
+	switch {
+	case err == nil && existing.Equal(cred):
+		log.Infof("%s credentials for %s already exist and match; skipping write", kind, mac)
+		return true
+	case err == nil:
+		log.Warnf("%s credentials for %s differ from existing; overwriting vault entry", kind, mac)
+	case errors.Is(err, errCredentialNotFound):
+		// No existing secret; fall through to write.
+	default:
+		log.Warnf("%s credentials for %s could not be read (%v); overwriting vault entry", kind, mac, err)
+	}
+	return false
+}
+
+// PutBMC writes BMC credentials to Vault. If an identical entry exists this
+// is a no-op; if a different entry exists it is overwritten with a warning;
+// if the existing entry could not be read (transient Vault failure, corrupted
+// secret, etc.) the write proceeds with a warning so credential rotation is
+// not blocked. Use PatchBMC for the same effect without the existence check.
 func (m *VaultCredentialManager) PutBMC(ctx context.Context, mac net.HardwareAddr, cred *credential.Credential) error {
 	key := m.getBMCCredentialKey(mac)
-	if existing, err := m.get(ctx, key); err == nil && existing != nil {
-		if existing.Equal(cred) {
-			log.Infof("BMC credentials for %s already exist and match; skipping write", mac)
-			return nil
-		}
-		return fmt.Errorf("BMC credentials already exist for %s and differ from provided; use PatchBMC to overwrite", mac)
+	if m.shouldSkipWrite(ctx, key, "BMC", mac, cred) {
+		return nil
 	}
 	return m.put(ctx, key, cred)
 }
@@ -258,16 +288,13 @@ func (m *VaultCredentialManager) GetNVOS(ctx context.Context, mac net.HardwareAd
 	return m.get(ctx, m.getNVOSCredentialKey(mac))
 }
 
-// PutNVOS writes NVOS credentials to Vault. If an entry already exists and matches,
-// this is a no-op. If an entry exists but differs, an error is returned (use PatchNVOS to overwrite).
+// PutNVOS writes NVOS credentials to Vault. See PutBMC for the precise
+// upsert semantics (match → skip, differ → warn-and-overwrite,
+// unreadable → warn-and-overwrite).
 func (m *VaultCredentialManager) PutNVOS(ctx context.Context, mac net.HardwareAddr, cred *credential.Credential) error {
 	key := m.getNVOSCredentialKey(mac)
-	if existing, err := m.get(ctx, key); err == nil && existing != nil {
-		if existing.Equal(cred) {
-			log.Infof("NVOS credentials for %s already exist and match; skipping write", mac)
-			return nil
-		}
-		return fmt.Errorf("NVOS credentials already exist for %s and differ from provided; use PatchNVOS to overwrite", mac)
+	if m.shouldSkipWrite(ctx, key, "NVOS", mac, cred) {
+		return nil
 	}
 	return m.put(ctx, key, cred)
 }

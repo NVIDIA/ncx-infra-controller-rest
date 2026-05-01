@@ -1631,10 +1631,29 @@ func (x *UpdatePowershelfFirmwareRequest) GetComponents() []*UpdateComponentFirm
 	return nil
 }
 
+// UpdateFirmwareRequest queues firmware updates for one or more powershelves.
+// Registered powershelves are identified by PMC MAC; unregistered devices use FirmwareTarget.
+//
+// `upgrades` and `targets` are mutually exclusive: a single request must
+// populate exactly one of them. The handler does not deduplicate across the
+// two lists, so allowing both would risk queuing duplicate updates for any
+// device whose PMC MAC and FirmwareTarget are both supplied. Callers with
+// mixed inventory should issue one RPC per registration state. A request
+// that populates neither is rejected for the same reason it would be a no-op.
+//
+// Whichever list is populated is processed best-effort, per item: a failure
+// for one powershelf (validation, auto-registration, per-component upgrade
+// failure) does not abort processing of the remaining items and does not
+// produce a non-OK gRPC status. Outcomes are reported at two nested levels:
+// `UpdateFirmwareResponse.responses[i]` for per-powershelf results and
+// `responses[i].components[j].status` for per-component results within each
+// powershelf. The RPC only returns a top-level error on global failures
+// (powershelf manager uninitialized, or violation of the mutual-exclusivity
+// contract above).
 type UpdateFirmwareRequest struct {
 	state         protoimpl.MessageState             `protogen:"open.v1"`
-	Upgrades      []*UpdatePowershelfFirmwareRequest `protobuf:"bytes,1,rep,name=upgrades,proto3" json:"upgrades,omitempty"`
-	Targets       []*UpdateFirmwareTargetRequest     `protobuf:"bytes,2,rep,name=targets,proto3" json:"targets,omitempty"` // Unregistered devices (auto-registered before update)
+	Upgrades      []*UpdatePowershelfFirmwareRequest `protobuf:"bytes,1,rep,name=upgrades,proto3" json:"upgrades,omitempty"` // Registered powershelves to update; mutually exclusive with `targets`. Processed best-effort.
+	Targets       []*UpdateFirmwareTargetRequest     `protobuf:"bytes,2,rep,name=targets,proto3" json:"targets,omitempty"`   // Unregistered devices (auto-registered before update); mutually exclusive with `upgrades`. Processed best-effort.
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1683,10 +1702,12 @@ func (x *UpdateFirmwareRequest) GetTargets() []*UpdateFirmwareTargetRequest {
 	return nil
 }
 
+// UpdateComponentFirmwareResponse is the per-component result for one
+// powershelf. See UpdateFirmwareRequest for the best-effort contract.
 type UpdateComponentFirmwareResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Component     PowershelfComponent    `protobuf:"varint,1,opt,name=component,proto3,enum=v1.PowershelfComponent" json:"component,omitempty"`
-	Status        StatusCode             `protobuf:"varint,2,opt,name=status,proto3,enum=v1.StatusCode" json:"status,omitempty"`
+	Status        StatusCode             `protobuf:"varint,2,opt,name=status,proto3,enum=v1.StatusCode" json:"status,omitempty"` // SUCCESS or error; per-component outcome under UpdateFirmwareRequest's best-effort contract
 	Error         string                 `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1743,6 +1764,11 @@ func (x *UpdateComponentFirmwareResponse) GetError() string {
 	return ""
 }
 
+// UpdatePowershelfFirmwareResponse is the per-powershelf result. The
+// outer-level outcome is conveyed by `components[*].status`; there is no
+// separate top-level status field. Validation/registration failures fan out
+// across all requested components in this slice with the same status/error
+// (see fanOutComponentError in the service implementation).
 type UpdatePowershelfFirmwareResponse struct {
 	state         protoimpl.MessageState             `protogen:"open.v1"`
 	PmcMacAddress string                             `protobuf:"bytes,1,opt,name=pmc_mac_address,json=pmcMacAddress,proto3" json:"pmc_mac_address,omitempty"`
@@ -1803,6 +1829,11 @@ func (x *UpdatePowershelfFirmwareResponse) GetPmcIp() string {
 	return ""
 }
 
+// UpdateFirmwareResponse returns the results for each powershelf. Length and
+// ordering correspond to whichever of `upgrades` or `targets` was populated
+// in the originating request (the two are mutually exclusive). Each entry
+// reports its own outcome via its nested `components` slice; see
+// UpdateFirmwareRequest for the best-effort contract.
 type UpdateFirmwareResponse struct {
 	state         protoimpl.MessageState              `protogen:"open.v1"`
 	Responses     []*UpdatePowershelfFirmwareResponse `protobuf:"bytes,1,rep,name=responses,proto3" json:"responses,omitempty"`

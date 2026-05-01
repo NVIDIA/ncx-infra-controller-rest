@@ -349,7 +349,12 @@ func TestVaultManager_NVOSPutGet(t *testing.T) {
 	}
 }
 
-func TestVaultManager_PutIdempotentAndConflict(t *testing.T) {
+// TestVaultManager_PutUpsertSemantics pins the upsert contract that PutBMC
+// and PutNVOS share with the in-memory backend (see inmemory_test.go):
+// identical credentials are a no-op, differing credentials overwrite (with a
+// warning log not asserted here), and PatchBMC/PatchNVOS unconditionally
+// replace.
+func TestVaultManager_PutUpsertSemantics(t *testing.T) {
 	fake := newFakeVaultKVServer()
 	fake.mountPresent = true
 	srv := httptest.NewServer(fake.handler())
@@ -359,30 +364,33 @@ func TestVaultManager_PutIdempotentAndConflict(t *testing.T) {
 	mgr := newManagerWithServer(t, srv)
 	mac := parseMAC(t, "00:11:22:33:44:55")
 
-	// First put succeeds
+	// First put writes the credentials.
 	assert.NoError(t, mgr.PutBMC(ctx, mac, newCredential("admin", "secret")))
 	assert.NoError(t, mgr.PutNVOS(ctx, mac, newCredential("nvos", "nvos_secret")))
 
-	// Idempotent put with same credentials succeeds (no-op)
+	// Idempotent put with identical credentials is skipped, not rewritten.
 	assert.NoError(t, mgr.PutBMC(ctx, mac, newCredential("admin", "secret")))
 	assert.NoError(t, mgr.PutNVOS(ctx, mac, newCredential("nvos", "nvos_secret")))
 
-	// Put with different credentials returns error
-	assert.Error(t, mgr.PutBMC(ctx, mac, newCredential("admin", "different")))
-	assert.Error(t, mgr.PutNVOS(ctx, mac, newCredential("nvos", "different")))
+	// Put with different credentials succeeds and overwrites the existing
+	// entry (warn-and-overwrite). This matches the in-memory backend so that
+	// callers like nvswitchmanager.Register get consistent semantics across
+	// datastore types.
+	assert.NoError(t, mgr.PutBMC(ctx, mac, newCredential("admin", "rotated")))
+	assert.NoError(t, mgr.PutNVOS(ctx, mac, newCredential("nvos", "rotated")))
 
-	// Original credentials remain unchanged
 	bmcCred, err := mgr.GetBMC(ctx, mac)
 	assert.NoError(t, err)
 	assert.Equal(t, "admin", bmcCred.User)
-	assert.Equal(t, "secret", bmcCred.Password.Value)
+	assert.Equal(t, "rotated", bmcCred.Password.Value)
 
 	nvosCred, err := mgr.GetNVOS(ctx, mac)
 	assert.NoError(t, err)
 	assert.Equal(t, "nvos", nvosCred.User)
-	assert.Equal(t, "nvos_secret", nvosCred.Password.Value)
+	assert.Equal(t, "rotated", nvosCred.Password.Value)
 
-	// PatchBMC/PatchNVOS can still overwrite
+	// PatchBMC/PatchNVOS unconditionally replace, even when the existing
+	// entry differs from the new value.
 	assert.NoError(t, mgr.PatchBMC(ctx, mac, newCredential("root", "new_pass")))
 	assert.NoError(t, mgr.PatchNVOS(ctx, mac, newCredential("nvos_root", "new_nvos_pass")))
 

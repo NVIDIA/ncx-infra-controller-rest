@@ -22,10 +22,13 @@ import (
 	"testing"
 
 	pb "github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/internal/proto/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/firmwaremanager"
 	"github.com/NVIDIA/ncx-infra-controller-rest/nvswitch-manager/pkg/redfish"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestResetTarget_InvalidIP(t *testing.T) {
@@ -206,18 +209,63 @@ func TestFirmwareTargetToRegisterRequest(t *testing.T) {
 	assert.Equal(t, int32(22), req.Nvos.Port)
 }
 
-func TestQueueUpdates_InvalidTarget(t *testing.T) {
+// TestQueueUpdates_NilFirmwareManager guards the early-return in QueueUpdates
+// that protects against being called before the firmware manager has been
+// initialized (e.g. when persistent mode is configured but the firmware
+// packages directory is unset). Per-target validation is exercised by the
+// TestValidateFirmwareTarget_* tests; driving end-to-end validation through
+// the handler would require a non-nil fwm and is left for handler-level
+// tests with a mocked FirmwareManager.
+func TestQueueUpdates_NilFirmwareManager(t *testing.T) {
 	srv := &NVSwitchManagerServerImpl{}
-	// fwm is nil, but the target validation should fail before reaching fwm
-	// We can't test the full flow without a fwm, but we can test validation errors
-	// by checking that the handler returns results (not a gRPC error) for invalid targets.
 
-	// Without fwm, QueueUpdates returns "firmware manager not initialized"
-	// So we only test validateFirmwareTarget directly here.
-	target := validFirmwareTarget()
-	target.BmcIp = "invalid"
-	err := validateFirmwareTarget(target)
-	assert.Error(t, err)
+	resp, err := srv.QueueUpdates(context.Background(), &pb.QueueUpdatesRequest{})
 
-	_ = srv // suppress unused
+	require.Error(t, err)
+	assert.Nil(t, resp)
+	st, ok := status.FromError(err)
+	require.True(t, ok, "expected a gRPC status error, got %T", err)
+	assert.Equal(t, codes.Unavailable, st.Code())
+	assert.Contains(t, st.Message(), "firmware manager not initialized")
+}
+
+// TestQueueUpdates_MutualExclusivity locks in the contract that
+// QueueUpdates rejects requests violating the switch_uuids/targets
+// mutual-exclusivity constraint. See QueueUpdatesRequest in
+// nvswitch-manager.proto for the full contract documentation.
+func TestQueueUpdates_MutualExclusivity(t *testing.T) {
+	cases := map[string]struct {
+		req         *pb.QueueUpdatesRequest
+		wantMessage string
+	}{
+		"empty request rejected (no work to do)": {
+			req:         &pb.QueueUpdatesRequest{},
+			wantMessage: "either switch_uuids or targets",
+		},
+		"both populated rejected (would risk duplicate updates)": {
+			req: &pb.QueueUpdatesRequest{
+				SwitchUuids: []string{"00000000-0000-0000-0000-000000000001"},
+				Targets:     []*pb.FirmwareTarget{validFirmwareTarget()},
+			},
+			wantMessage: "not both",
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			// Non-nil fwm so we get past the Unavailable guard. The
+			// mutual-exclusivity validation rejects before any fwm method
+			// is invoked, so a zero-value pointer is sufficient.
+			srv := &NVSwitchManagerServerImpl{fwm: &firmwaremanager.FirmwareManager{}}
+
+			resp, err := srv.QueueUpdates(context.Background(), tc.req)
+
+			require.Error(t, err)
+			assert.Nil(t, resp)
+			st, ok := status.FromError(err)
+			require.True(t, ok, "expected a gRPC status error, got %T", err)
+			assert.Equal(t, codes.InvalidArgument, st.Code())
+			assert.Contains(t, st.Message(), tc.wantMessage)
+		})
+	}
 }

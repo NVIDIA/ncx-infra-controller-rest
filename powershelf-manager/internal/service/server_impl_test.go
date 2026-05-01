@@ -21,13 +21,21 @@ import (
 	"testing"
 
 	pb "github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/internal/proto/v1"
+	"github.com/NVIDIA/ncx-infra-controller-rest/powershelf-manager/pkg/powershelfmanager"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
+// newTestServer returns a PowershelfManagerServerImpl with a non-nil but
+// zero-value PowershelfManager so handlers can pass their nil-guard. Tests
+// that need to exercise the nil-guard path itself (e.g.
+// TestUpdateFirmware_NilPowershelfManager) construct an empty
+// PowershelfManagerServerImpl directly.
 func newTestServer() *PowershelfManagerServerImpl {
-	return &PowershelfManagerServerImpl{}
+	return &PowershelfManagerServerImpl{psm: &powershelfmanager.PowershelfManager{}}
 }
 
 func TestPowerTarget_InvalidIP(t *testing.T) {
@@ -221,4 +229,71 @@ func TestUpdateFirmware_InvalidTarget(t *testing.T) {
 	require.Len(t, resp.Responses, 1)
 	require.Len(t, resp.Responses[0].Components, 1)
 	assert.Equal(t, pb.StatusCode_INVALID_ARGUMENT, resp.Responses[0].Components[0].Status)
+}
+
+// TestUpdateFirmware_NilPowershelfManager guards the early-return in
+// UpdateFirmware that protects against being called before the powershelf
+// manager has been initialized. Without this guard the handler would
+// nil-dereference inside upgradeComponents → updateFirmware → s.psm.UpgradeFirmware.
+func TestUpdateFirmware_NilPowershelfManager(t *testing.T) {
+	s := &PowershelfManagerServerImpl{}
+
+	// Use a populated request so we'd otherwise survive validation; the
+	// nil-guard must fire before mutual-exclusivity checks.
+	req := &pb.UpdateFirmwareRequest{
+		Upgrades: []*pb.UpdatePowershelfFirmwareRequest{
+			{PmcMacAddress: "00:11:22:33:44:55"},
+		},
+	}
+
+	resp, err := s.UpdateFirmware(context.Background(), req)
+
+	require.Error(t, err)
+	assert.Nil(t, resp)
+	st, ok := status.FromError(err)
+	require.True(t, ok, "expected a gRPC status error, got %T", err)
+	assert.Equal(t, codes.Unavailable, st.Code())
+	assert.Contains(t, st.Message(), "powershelf manager not initialized")
+}
+
+// TestUpdateFirmware_MutualExclusivity locks in the contract that
+// UpdateFirmware rejects requests violating the upgrades/targets
+// mutual-exclusivity constraint. See UpdateFirmwareRequest in
+// powershelf-manager.proto for the full contract documentation.
+func TestUpdateFirmware_MutualExclusivity(t *testing.T) {
+	cases := map[string]struct {
+		req         *pb.UpdateFirmwareRequest
+		wantMessage string
+	}{
+		"empty request rejected (no work to do)": {
+			req:         &pb.UpdateFirmwareRequest{},
+			wantMessage: "either upgrades or targets",
+		},
+		"both populated rejected (would risk duplicate updates)": {
+			req: &pb.UpdateFirmwareRequest{
+				Upgrades: []*pb.UpdatePowershelfFirmwareRequest{
+					{PmcMacAddress: "00:11:22:33:44:55"},
+				},
+				Targets: []*pb.UpdateFirmwareTargetRequest{
+					{Target: validFirmwareTarget()},
+				},
+			},
+			wantMessage: "not both",
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			s := newTestServer()
+
+			resp, err := s.UpdateFirmware(context.Background(), tc.req)
+
+			require.Error(t, err)
+			assert.Nil(t, resp)
+			st, ok := status.FromError(err)
+			require.True(t, ok, "expected a gRPC status error, got %T", err)
+			assert.Equal(t, codes.InvalidArgument, st.Code())
+			assert.Contains(t, st.Message(), tc.wantMessage)
+		})
+	}
 }

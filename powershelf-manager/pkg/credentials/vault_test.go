@@ -354,7 +354,11 @@ func TestVaultManager_Delete(t *testing.T) {
 	}
 }
 
-func TestVaultManager_PutIdempotentAndConflict(t *testing.T) {
+// TestVaultManager_PutUpsertSemantics pins the upsert contract that Put
+// shares with the in-memory backend: identical credentials are a no-op,
+// differing credentials overwrite (with a warning log not asserted here),
+// and Patch unconditionally replaces.
+func TestVaultManager_PutUpsertSemantics(t *testing.T) {
 	fake := newFakeVaultKVServer()
 	fake.mountPresent = true
 	srv := httptest.NewServer(fake.handler())
@@ -364,24 +368,25 @@ func TestVaultManager_PutIdempotentAndConflict(t *testing.T) {
 	mgr := newManagerWithServer(t, srv)
 	mac := parseMAC(t, "00:11:22:33:44:55")
 
-	// First Put succeeds
+	// First Put writes the credentials.
 	assert.NoError(t, mgr.Put(ctx, mac, newCred("admin", "secret")))
 
-	// Idempotent Put with same credentials is a no-op
+	// Idempotent Put with identical credentials is skipped, not rewritten.
 	assert.NoError(t, mgr.Put(ctx, mac, newCred("admin", "secret")))
 
-	// Put with different credentials returns error
-	err := mgr.Put(ctx, mac, newCred("admin", "different"))
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "differ from provided")
+	// Put with different credentials succeeds and overwrites the existing
+	// entry (warn-and-overwrite). This matches the in-memory backend so that
+	// callers like pmcmanager.Register get consistent semantics across
+	// datastore types.
+	assert.NoError(t, mgr.Put(ctx, mac, newCred("admin", "rotated")))
 
-	// Original credentials remain
 	got, err := mgr.Get(ctx, mac)
 	assert.NoError(t, err)
 	assert.Equal(t, "admin", got.User)
-	assert.Equal(t, "secret", got.Password.Value)
+	assert.Equal(t, "rotated", got.Password.Value)
 
-	// Patch with different credentials always succeeds
+	// Patch unconditionally replaces, even when the existing entry differs
+	// from the new value.
 	assert.NoError(t, mgr.Patch(ctx, mac, newCred("root", "newpass")))
 	got, err = mgr.Get(ctx, mac)
 	assert.NoError(t, err)

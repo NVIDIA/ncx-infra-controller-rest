@@ -1784,12 +1784,28 @@ func (x *QueueUpdateResponse) GetUpdates() []*FirmwareUpdateInfo {
 
 // QueueUpdatesRequest queues firmware updates for multiple switches.
 // Registered switches are identified by UUID; unregistered devices use FirmwareTarget.
+//
+// `switch_uuids` and `targets` are mutually exclusive: a single request must
+// populate exactly one of them. The handler does not deduplicate across the
+// two lists, so allowing both would risk queuing duplicate updates for any
+// device whose UUID and FirmwareTarget are both supplied. Callers with mixed
+// inventory should issue one RPC per registration state. A request that
+// populates neither is rejected for the same reason it would be a no-op.
+//
+// Whichever list is populated is processed best-effort, per item: a failure
+// for one switch (invalid UUID, validation, auto-registration, queue
+// rejection) does not abort processing of the remaining items and does not
+// produce a non-OK gRPC status. Callers must inspect each
+// `QueueUpdatesResponse.results[i].status` to determine per-item outcome.
+// The RPC only returns a top-level error on global failures (firmware
+// manager uninitialized, malformed `components` enum value, or violation of
+// the mutual-exclusivity contract above).
 type QueueUpdatesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	SwitchUuids   []string               `protobuf:"bytes,1,rep,name=switch_uuids,json=switchUuids,proto3" json:"switch_uuids,omitempty"`              // UUIDs of registered NV-Switches to update
+	SwitchUuids   []string               `protobuf:"bytes,1,rep,name=switch_uuids,json=switchUuids,proto3" json:"switch_uuids,omitempty"`              // UUIDs of registered NV-Switches to update; mutually exclusive with `targets`. Processed best-effort.
 	BundleVersion string                 `protobuf:"bytes,2,opt,name=bundle_version,json=bundleVersion,proto3" json:"bundle_version,omitempty"`        // Version of the firmware bundle
 	Components    []NVSwitchComponent    `protobuf:"varint,3,rep,packed,name=components,proto3,enum=v1.NVSwitchComponent" json:"components,omitempty"` // Components to update (empty = all)
-	Targets       []*FirmwareTarget      `protobuf:"bytes,4,rep,name=targets,proto3" json:"targets,omitempty"`                                         // Unregistered switches (auto-registered before update)
+	Targets       []*FirmwareTarget      `protobuf:"bytes,4,rep,name=targets,proto3" json:"targets,omitempty"`                                         // Unregistered switches (auto-registered before update); mutually exclusive with `switch_uuids`. Processed best-effort.
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1852,7 +1868,11 @@ func (x *QueueUpdatesRequest) GetTargets() []*FirmwareTarget {
 	return nil
 }
 
-// QueueUpdatesResponse returns the results for each switch.
+// QueueUpdatesResponse returns the results for each switch. Length and
+// ordering correspond to whichever of `switch_uuids` or `targets` was
+// populated in the originating request (the two are mutually exclusive).
+// Each entry reports its own outcome; see QueueUpdatesRequest for the
+// best-effort contract.
 type QueueUpdatesResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Results       []*QueueUpdateResult   `protobuf:"bytes,1,rep,name=results,proto3" json:"results,omitempty"`
@@ -1901,7 +1921,7 @@ func (x *QueueUpdatesResponse) GetResults() []*QueueUpdateResult {
 type QueueUpdateResult struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SwitchUuid    string                 `protobuf:"bytes,1,opt,name=switch_uuid,json=switchUuid,proto3" json:"switch_uuid,omitempty"` // UUID of the switch
-	Status        StatusCode             `protobuf:"varint,2,opt,name=status,proto3,enum=v1.StatusCode" json:"status,omitempty"`       // SUCCESS or error
+	Status        StatusCode             `protobuf:"varint,2,opt,name=status,proto3,enum=v1.StatusCode" json:"status,omitempty"`       // SUCCESS or error; per-item outcome under QueueUpdatesRequest's best-effort contract
 	Error         string                 `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`                             // Error message if status != SUCCESS
 	Updates       []*FirmwareUpdateInfo  `protobuf:"bytes,4,rep,name=updates,proto3" json:"updates,omitempty"`                         // Queued updates if successful
 	BmcIp         string                 `protobuf:"bytes,5,opt,name=bmc_ip,json=bmcIp,proto3" json:"bmc_ip,omitempty"`                // Set for FirmwareTarget responses; empty for UUID-based

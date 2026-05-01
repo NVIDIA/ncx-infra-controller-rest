@@ -61,14 +61,15 @@ func TestInMemoryStartStop(t *testing.T) {
 
 func TestInMemoryBMCPutGet(t *testing.T) {
 	testCases := map[string]struct {
-		initialPut bool
-		putMAC     string
-		putCred    *credential.Credential
-		getMAC     string
-		wantErr    bool
-		wantUser   string
-		wantPass   string
-		samePtr    bool
+		initialPut   bool
+		putMAC       string
+		putCred      *credential.Credential
+		putSameAgain bool // if true, immediately re-put a fresh-but-equal credential to exercise the idempotent skip path
+		getMAC       string
+		wantErr      bool
+		wantUser     string
+		wantPass     string
+		samePtr      bool
 	}{
 		"get existing valid BMC credential": {
 			initialPut: true,
@@ -93,14 +94,15 @@ func TestInMemoryBMCPutGet(t *testing.T) {
 			wantErr:    true,
 		},
 		"put same credential is no-op": {
-			initialPut: true,
-			putMAC:     "aa:bb:cc:dd:ee:ff",
-			putCred:    newCredential("user1", "p1"),
-			getMAC:     "aa:bb:cc:dd:ee:ff",
-			wantErr:    false,
-			wantUser:   "user1",
-			wantPass:   "p1",
-			samePtr:    true,
+			initialPut:   true,
+			putMAC:       "aa:bb:cc:dd:ee:ff",
+			putCred:      newCredential("user1", "p1"),
+			putSameAgain: true,
+			getMAC:       "aa:bb:cc:dd:ee:ff",
+			wantErr:      false,
+			wantUser:     "user1",
+			wantPass:     "p1",
+			samePtr:      true, // second put with equal-but-fresh pointer must be skipped, leaving original pointer in place
 		},
 	}
 
@@ -113,9 +115,12 @@ func TestInMemoryBMCPutGet(t *testing.T) {
 			if tc.initialPut {
 				mac := parseMAC(t, tc.putMAC)
 				assert.NoError(t, mgr.PutBMC(ctx, mac, tc.putCred))
-				// For the idempotent scenario, put the same credential again
-				if name == "put same credential is no-op" {
-					assert.NoError(t, mgr.PutBMC(ctx, mac, newCredential("user1", "p1")))
+				// Exercise the idempotent skip path with a fresh-but-equal
+				// credential pointer. samePtr below verifies the original
+				// pointer survived (i.e. the second Put was actually skipped,
+				// not just rewritten with the same values).
+				if tc.putSameAgain {
+					assert.NoError(t, mgr.PutBMC(ctx, mac, newCredential(tc.putCred.User, tc.putCred.Password.Value)))
 				}
 			}
 
