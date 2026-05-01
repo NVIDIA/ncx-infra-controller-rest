@@ -42,6 +42,7 @@ const (
 	NameBringUpControl            = "BringUpControl"
 	NameGetBringUpStatus          = "GetBringUpStatus"
 	NameVerifyFirmwareConsistency = "VerifyFirmwareConsistency"
+	NamePausePowerOnGate          = "PausePowerOnGate"
 )
 
 // InjectExpectation is a Temporal activity that registers expected component
@@ -210,6 +211,27 @@ func (a *Activities) VerifyFirmwareConsistency(
 	}
 
 	return checker.VerifyFirmwareConsistency(ctx, target)
+}
+
+// PausePowerOnGate moves the power-on gate to a paused state for each target
+// component, preventing the power manager from automatically powering it back
+// on. Only supported by component managers that implement PowerOnGateController.
+func (a *Activities) PausePowerOnGate(
+	ctx context.Context,
+	target common.Target,
+) error {
+	cm, err := a.validAndGetComponentManager(target)
+	if err != nil {
+		return err
+	}
+
+	gate, ok := cm.(componentmanager.PowerOnGateController)
+	if !ok {
+		return fmt.Errorf("component manager for %s does not support PausePowerOnGate",
+			target.Type)
+	}
+
+	return gate.PausePowerOnGate(ctx, target)
 }
 
 // validAndGetComponentManager validates the target and returns the component

@@ -699,6 +699,52 @@ func (m *Manager) GetFirmwareStatus(ctx context.Context, target common.Target) (
 	return result, nil
 }
 
+// PausePowerOnGate moves the per-machine desired power state to
+// PowerManagerDisabled, taking the machine out of Carbide's power-manager
+// control. Once paused, Carbide's reconcile loop will not attempt to bring
+// the machine back up until the gate is re-enabled (typically by setting
+// the desired state back to On via UpdatePowerOption).
+//
+// Idempotent: if the desired state is already Disabled, Carbide returns
+// "already set as ..." which we recognise via isAlreadyInDesiredStateError
+// and skip without erroring.
+func (m *Manager) PausePowerOnGate(
+	ctx context.Context,
+	target common.Target,
+) error {
+	log.Debug().
+		Str("components", target.String()).
+		Msg("PausePowerOnGate for compute")
+
+	if m.carbideClient == nil {
+		return fmt.Errorf("carbide client is not configured")
+	}
+
+	if err := target.Validate(); err != nil {
+		return fmt.Errorf("target is invalid: %w", err)
+	}
+
+	for _, componentID := range target.ComponentIDs {
+		if err := m.carbideClient.UpdatePowerOption(
+			ctx, componentID, carbideapi.PowerStateDisabled,
+		); err != nil {
+			if isAlreadyInDesiredStateError(err) {
+				log.Debug().Str("component", componentID).
+					Msg("Power option already disabled, skipping")
+				continue
+			}
+			return fmt.Errorf(
+				"failed to pause power-on gate for %s: %w", componentID, err,
+			)
+		}
+		log.Info().
+			Str("component_id", componentID).
+			Msg("PausePowerOnGate succeeded")
+	}
+
+	return nil
+}
+
 // BringUpControl opens the Carbide power-on gate for
 // each compute component, allowing bring-up and power on.
 func (m *Manager) BringUpControl(

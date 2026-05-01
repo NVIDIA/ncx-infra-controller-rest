@@ -57,6 +57,7 @@ var actionExecutorRegistry = map[string]actionExecutor{
 	operationrules.ActionWaitBringUp:               executeWaitBringUpAction,
 	operationrules.ActionInjectExpectation:         executeInjectExpectationAction,
 	operationrules.ActionVerifyFirmwareConsistency: executeVerifyFirmwareConsistencyAction,
+	operationrules.ActionPausePowerOnGate:          executePausePowerOnGateAction,
 }
 
 // executeActionList executes a list of actions sequentially
@@ -406,6 +407,14 @@ func verifyPowerStatus(
 func executeBringUpControlAction(actx actionExecutionContext) error {
 	return workflow.ExecuteActivity(
 		actx.workflowContext, activity.NameBringUpControl, actx.target,
+	).Get(actx.workflowContext, nil)
+}
+
+// executePausePowerOnGateAction pauses the power-on gate for the target
+// components so the power manager will not automatically bring them back up.
+func executePausePowerOnGateAction(actx actionExecutionContext) error {
+	return workflow.ExecuteActivity(
+		actx.workflowContext, activity.NamePausePowerOnGate, actx.target,
 	).Get(actx.workflowContext, nil)
 }
 

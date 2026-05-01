@@ -46,6 +46,15 @@ const (
 	ActionBringUpControl    = "BringUpControl"
 	ActionWaitBringUp       = "WaitBringUp"
 	ActionInjectExpectation = "InjectExpectation"
+
+	// Bring-down specific actions
+	//
+	// PausePowerOnGate moves the per-machine desired power state to
+	// PowerManagerDisabled, taking the machine out of Carbide's power-manager
+	// control so that subsequent reconcile passes will not bring it back up.
+	// Distinct from a power_off PowerControl, which only sets desired state to
+	// Off and leaves the machine under power-manager supervision.
+	ActionPausePowerOnGate = "PausePowerOnGate"
 )
 
 // Parameter keys for ActionConfig.Parameters

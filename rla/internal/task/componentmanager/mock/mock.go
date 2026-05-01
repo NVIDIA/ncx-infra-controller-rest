@@ -181,6 +181,19 @@ func (m *Manager) BringUpControl(
 	return nil
 }
 
+// PausePowerOnGate simulates pausing the power-on gate.
+func (m *Manager) PausePowerOnGate(
+	ctx context.Context,
+	target common.Target,
+) error {
+	log.Debug().
+		Str("component_type", m.componentType.String()).
+		Str("target", target.String()).
+		Msg("Mock: PausePowerOnGate")
+	time.Sleep(m.delay)
+	return nil
+}
+
 // GetBringUpStatus simulates getting bring-up status.
 func (m *Manager) GetBringUpStatus(
 	ctx context.Context,

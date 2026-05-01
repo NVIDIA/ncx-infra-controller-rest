@@ -748,6 +748,53 @@ func (rs *RLAServerImpl) BringUpRack(
 	}, nil
 }
 
+// BringDownRack reuses the BringUp workflow with the bring-down rule to
+// gracefully take a rack offline: power off compute, pause the per-machine
+// power-on gate (so the power manager will not auto-revive it), then power
+// off NVLSwitch and PowerShelf.
+func (rs *RLAServerImpl) BringDownRack(
+	ctx context.Context,
+	req *pb.BringDownRackRequest,
+) (*pb.SubmitTaskResponse, error) {
+	if rs.taskManager == nil {
+		return nil, errors.New("task manager is not available")
+	}
+
+	targetSpec := req.GetTargetSpec()
+	if targetSpec == nil {
+		return nil, errors.New("target_spec is required")
+	}
+
+	info := &operations.BringUpTaskInfo{
+		RuleID: protobuf.UUIDStringFrom(req.GetRuleId()),
+	}
+
+	opReq, err := rs.convertTargetSpecToOperationRequest(
+		targetSpec, req.GetDescription(), info,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Override the operation code so the rule resolver picks the
+	// bring-down rule instead of the default bring-up rule.
+	opReq.Operation.Code = taskcommon.OpCodeBringDown
+	opReq.RuleID = protobuf.OptionalUUIDFrom(req.GetRuleId())
+
+	taskIDs, err := rs.taskManager.SubmitTask(ctx, opReq)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(taskIDs) == 0 {
+		return nil, errors.New("failed to create any tasks")
+	}
+
+	return &pb.SubmitTaskResponse{
+		TaskIds: protobuf.UUIDsTo(taskIDs),
+	}, nil
+}
+
 // IngestRack is a convenience API that triggers component ingestion by reusing
 // the BringUp workflow with an ingestion-only rule. This registers expected
 // components with their respective component manager services without

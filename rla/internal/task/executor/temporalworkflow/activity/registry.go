@@ -60,5 +60,6 @@ func (a *Activities) All() map[string]any {
 		NameBringUpControl:            a.BringUpControl,
 		NameGetBringUpStatus:          a.GetBringUpStatus,
 		NameVerifyFirmwareConsistency: a.VerifyFirmwareConsistency,
+		NamePausePowerOnGate:          a.PausePowerOnGate,
 	}
 }
