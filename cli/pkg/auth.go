@@ -111,7 +111,10 @@ func LoginCommand() *cli.Command {
 			if HasOIDCConfig(cfg) {
 				return loginWithOIDCCmd(c, cfg)
 			}
-			if HasAPIKeyConfig(cfg) {
+			if cfg.Auth.APIKey != nil && cfg.Auth.APIKey.Key != "" {
+				if cfg.Auth.APIKey.AuthnURL == "" {
+					return fmt.Errorf("auth.api_key.authn_url is required in config")
+				}
 				return loginWithAPIKey(cfg, cfg.Auth.APIKey.AuthnURL, cfg.Auth.APIKey.Key)
 			}
 			return loginWithOIDCCmd(c, cfg)
