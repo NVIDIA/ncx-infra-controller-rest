@@ -227,7 +227,9 @@ func LoginWithOIDCConfig(cfg *ConfigFile, configPath string) (string, error) {
 		return "", fmt.Errorf("OIDC login requires auth.oidc.refresh_token, client credentials, or username/password in config")
 	}
 
-	saveOIDCToken(oidc, tokenResp)
+	if err := saveOIDCToken(oidc, tokenResp); err != nil {
+		return "", err
+	}
 	if err := SaveConfigToPath(cfg, configPath); err != nil {
 		return "", fmt.Errorf("saving config: %w", err)
 	}
@@ -393,7 +395,9 @@ func loginWithOIDCCmd(c *cli.Context, cfg *ConfigFile) error {
 	if cfg.Auth.OIDC == nil {
 		cfg.Auth.OIDC = &ConfigOIDC{}
 	}
-	saveOIDCToken(cfg.Auth.OIDC, tokenResp)
+	if err := saveOIDCToken(cfg.Auth.OIDC, tokenResp); err != nil {
+		return err
+	}
 	cfg.Auth.OIDC.TokenURL = tokenURL
 	cfg.Auth.OIDC.ClientID = clientID
 	cfg.Auth.OIDC.ClientSecret = clientSecret
@@ -508,7 +512,9 @@ func AutoRefreshTokenToPath(cfg *ConfigFile, configPath string) (string, error) 
 		return oidc.Token, nil
 	}
 
-	saveOIDCToken(oidc, tokenResp)
+	if err := saveOIDCToken(oidc, tokenResp); err != nil {
+		return oidc.Token, err
+	}
 	if err := SaveConfigToPath(cfg, configPath); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: token refreshed but could not save config: %v\n", err)
 	}
@@ -516,10 +522,14 @@ func AutoRefreshTokenToPath(cfg *ConfigFile, configPath string) (string, error) 
 	return oidc.Token, nil
 }
 
-func saveOIDCToken(oidc *ConfigOIDC, tokenResp *TokenResponse) {
+func saveOIDCToken(oidc *ConfigOIDC, tokenResp *TokenResponse) error {
+	if tokenResp.AccessToken == "" {
+		return fmt.Errorf("OIDC token response did not contain an access token")
+	}
 	oidc.Token = tokenResp.AccessToken
 	if tokenResp.RefreshToken != "" {
 		oidc.RefreshToken = tokenResp.RefreshToken
 	}
 	oidc.ExpiresAt = time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second).Format(time.RFC3339)
+	return nil
 }

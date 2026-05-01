@@ -137,10 +137,25 @@ func TestAutoRefreshTokenToPathSavesSelectedConfig(t *testing.T) {
 
 func TestSaveOIDCTokenPreservesExistingRefreshTokenWhenOmitted(t *testing.T) {
 	oidc := &ConfigOIDC{RefreshToken: "existing-refresh"}
-	saveOIDCToken(oidc, &TokenResponse{AccessToken: "new-token", ExpiresIn: 3600})
+	require.NoError(t, saveOIDCToken(oidc, &TokenResponse{AccessToken: "new-token", ExpiresIn: 3600}))
 	require.Equal(t, "new-token", oidc.Token)
 	require.Equal(t, "existing-refresh", oidc.RefreshToken)
 	require.NotEmpty(t, oidc.ExpiresAt)
+}
+
+func TestSaveOIDCTokenErrorsWhenAccessTokenMissing(t *testing.T) {
+	oidc := &ConfigOIDC{
+		Token:        "existing-token",
+		RefreshToken: "existing-refresh",
+		ExpiresAt:    "2026-01-01T00:00:00Z",
+	}
+
+	err := saveOIDCToken(oidc, &TokenResponse{RefreshToken: "new-refresh", ExpiresIn: 3600})
+
+	require.Error(t, err)
+	require.Equal(t, "existing-token", oidc.Token)
+	require.Equal(t, "existing-refresh", oidc.RefreshToken)
+	require.Equal(t, "2026-01-01T00:00:00Z", oidc.ExpiresAt)
 }
 
 func TestLoginCommandExplicitAPIKeyWinsOverOIDCFlags(t *testing.T) {
