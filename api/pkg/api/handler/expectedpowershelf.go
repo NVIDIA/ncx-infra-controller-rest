@@ -191,8 +191,8 @@ func (cepsh CreateExpectedPowerShelfHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusBadRequest, "Site is not in Registered state, cannot perform operation", nil)
 	}
 
-	// Check for duplicate MAC address
-	// Notes: We do not allow multiple Expected Power Shelves with the same MAC address, but it's not a DB unique constraint so we check here
+	// Check for duplicate MAC address. The DB enforces UNIQUE (bmc_mac_address, site_id),
+	// but we pre-check here so we can return the conflicting record's ID in the response.
 	epsDAO := cdbm.NewExpectedPowerShelfDAO(cepsh.dbSession)
 	epsList, count, err := epsDAO.GetAll(ctx, nil, cdbm.ExpectedPowerShelfFilterInput{
 		BmcMacAddresses: []string{apiRequest.BmcMacAddress},
