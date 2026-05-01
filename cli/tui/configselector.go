@@ -132,9 +132,18 @@ func RunTUI(explicitConfig string) error {
 		apiName = "carbide"
 	}
 
-	token, _ := carbidecli.AutoRefreshToken(cfg)
+	token, refreshErr := carbidecli.AutoRefreshTokenToPath(cfg, configPath)
+	if refreshErr != nil {
+		return fmt.Errorf("refreshing auth token: %w", refreshErr)
+	}
 	if token == "" {
 		token = carbidecli.GetAuthToken(cfg)
+	}
+	if token == "" && (carbidecli.HasTokenCommandConfig(cfg) || carbidecli.HasOIDCConfig(cfg) || carbidecli.HasAPIKeyConfig(cfg)) {
+		token, err = carbidecli.LoginFromConfig(cfg, configPath)
+		if err != nil {
+			return fmt.Errorf("logging in from config: %w", err)
+		}
 	}
 
 	client := carbidecli.NewClient(baseURL, org, token, nil, false)
@@ -143,9 +152,30 @@ func RunTUI(explicitConfig string) error {
 	session := NewSession(client, org, configPath)
 	session.Token = token
 
-	if carbidecli.HasOIDCConfig(cfg) || carbidecli.HasAPIKeyConfig(cfg) {
-		session.LoginFn = func() (string, error) {
-			return loginFromConfig(cfg, configPath)
+	if carbidecli.HasTokenCommandConfig(cfg) || carbidecli.HasOIDCConfig(cfg) || carbidecli.HasAPIKeyConfig(cfg) {
+		loginFn := func() (string, error) {
+			return carbidecli.LoginFromConfig(cfg, configPath)
+		}
+		session.LoginFn = loginFn
+		client.TokenRefresh = func() (string, error) {
+			token, err := loginFn()
+			if err == nil && token != "" {
+				session.RefreshClient(token)
+			}
+			return token, err
+		}
+		client.AuthRetryNotify = func(event carbidecli.AuthRetryEvent) {
+			switch event.Action {
+			case carbidecli.AuthRetryActionLogin:
+				fmt.Fprintf(os.Stderr, "%s API returned %d; running configured login (%d/%d).\n",
+					Yellow("Auth:"), event.StatusCode, event.Attempt, event.MaxAttempts)
+			case carbidecli.AuthRetryActionRetry:
+				fmt.Fprintf(os.Stderr, "%s Retrying API request with refreshed token (%d/%d).\n",
+					Yellow("Auth:"), event.Attempt, event.MaxAttempts)
+			case carbidecli.AuthRetryActionSkip:
+				fmt.Fprintf(os.Stderr, "%s API returned %d for %s; automatic retry skipped for non-idempotent request. Run %s and retry the command.\n",
+					Yellow("Auth:"), event.StatusCode, event.Method, Bold("login"))
+			}
 		}
 	}
 
@@ -155,22 +185,4 @@ func RunTUI(explicitConfig string) error {
 	}
 
 	return RunREPL(session)
-}
-
-// loginFromConfig performs a fresh login using the config's auth method.
-func loginFromConfig(cfg *carbidecli.ConfigFile, configPath string) (string, error) {
-	if carbidecli.HasOIDCConfig(cfg) {
-		newToken, err := carbidecli.AutoRefreshToken(cfg)
-		if err != nil || newToken == "" {
-			return "", fmt.Errorf("OIDC token refresh failed: %w", err)
-		}
-		if saveErr := carbidecli.SaveConfigToPath(cfg, configPath); saveErr != nil {
-			fmt.Fprintf(os.Stderr, "Warning: could not save refreshed token: %v\n", saveErr)
-		}
-		return newToken, nil
-	}
-	if carbidecli.HasAPIKeyConfig(cfg) {
-		return carbidecli.ExchangeAPIKey(cfg, configPath)
-	}
-	return "", fmt.Errorf("no auth method configured")
 }
