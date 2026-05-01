@@ -28,7 +28,6 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
-	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
 	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
 	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
@@ -43,66 +42,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	tclient "go.temporal.io/sdk/client"
 )
-
-// expectedSwitchToProto builds the workflow proto. BMC and NVOS credentials
-// and labels are passed separately because they may come from the API request
-// rather than the DB record (credentials aren't persisted at all).
-func expectedSwitchToProto(es *cdbm.ExpectedSwitch, defaultBmcUsername, defaultBmcPassword, nvOsUsername, nvOsPassword *string, labels map[string]string) *cwssaws.ExpectedSwitch {
-	proto := &cwssaws.ExpectedSwitch{
-		ExpectedSwitchId:   &cwssaws.UUID{Value: es.ID.String()},
-		BmcMacAddress:      es.BmcMacAddress,
-		SwitchSerialNumber: es.SwitchSerialNumber,
-	}
-
-	if es.RackID != nil {
-		proto.RackId = &cwssaws.RackId{Id: *es.RackID}
-	}
-	if es.Name != nil {
-		proto.Name = es.Name
-	}
-	if es.Manufacturer != nil {
-		proto.Manufacturer = es.Manufacturer
-	}
-	if es.Model != nil {
-		proto.Model = es.Model
-	}
-	if es.Description != nil {
-		proto.Description = es.Description
-	}
-	if es.FirmwareVersion != nil {
-		proto.FirmwareVersion = es.FirmwareVersion
-	}
-	if es.SlotID != nil {
-		proto.SlotId = es.SlotID
-	}
-	if es.TrayIdx != nil {
-		proto.TrayIdx = es.TrayIdx
-	}
-	if es.HostID != nil {
-		proto.HostId = es.HostID
-	}
-
-	if defaultBmcUsername != nil {
-		proto.BmcUsername = *defaultBmcUsername
-	}
-	if defaultBmcPassword != nil {
-		proto.BmcPassword = *defaultBmcPassword
-	}
-	if nvOsUsername != nil {
-		proto.NvosUsername = nvOsUsername
-	}
-	if nvOsPassword != nil {
-		proto.NvosPassword = nvOsPassword
-	}
-
-	if protoLabels := util.ProtobufLabelsFromAPILabels(labels); protoLabels != nil {
-		proto.Metadata = &cwssaws.Metadata{
-			Labels: protoLabels,
-		}
-	}
-
-	return proto
-}
 
 // ~~~~~ Create Handler ~~~~~ //
 
@@ -255,14 +194,12 @@ func (cesh CreateExpectedSwitchHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Expected Switch due to DB error", nil)
 	}
 
-	createExpectedSwitchRequest := expectedSwitchToProto(
-		expectedSwitch,
-		apiRequest.DefaultBmcUsername,
-		apiRequest.DefaultBmcPassword,
-		apiRequest.NvOsUsername,
-		apiRequest.NvOsPassword,
-		apiRequest.Labels,
-	)
+	createExpectedSwitchRequest := expectedSwitch.ToProto(cdbm.ExpectedSwitchCredentials{
+		BmcUsername:  apiRequest.DefaultBmcUsername,
+		BmcPassword:  apiRequest.DefaultBmcPassword,
+		NvosUsername: apiRequest.NvOsUsername,
+		NvosPassword: apiRequest.NvOsPassword,
+	})
 
 	logger.Info().Msg("triggering Expected Switch create workflow on Site")
 
@@ -715,14 +652,12 @@ func (uesh UpdateExpectedSwitchHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Expected Switch due to DB error", nil)
 	}
 
-	updateExpectedSwitchRequest := expectedSwitchToProto(
-		updatedExpectedSwitch,
-		apiRequest.DefaultBmcUsername,
-		apiRequest.DefaultBmcPassword,
-		apiRequest.NvOsUsername,
-		apiRequest.NvOsPassword,
-		apiRequest.Labels,
-	)
+	updateExpectedSwitchRequest := updatedExpectedSwitch.ToProto(cdbm.ExpectedSwitchCredentials{
+		BmcUsername:  apiRequest.DefaultBmcUsername,
+		BmcPassword:  apiRequest.DefaultBmcPassword,
+		NvosUsername: apiRequest.NvOsUsername,
+		NvosPassword: apiRequest.NvOsPassword,
+	})
 
 	logger.Info().Msg("triggering ExpectedSwitch update workflow")
 

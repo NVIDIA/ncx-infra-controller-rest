@@ -28,7 +28,6 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
-	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
 	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
 	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
@@ -43,63 +42,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	tclient "go.temporal.io/sdk/client"
 )
-
-// expectedPowerShelfToProto builds the workflow proto. BMC credentials and
-// labels are passed separately because they may come from the API request
-// rather than the DB record (BMC credentials aren't persisted at all).
-func expectedPowerShelfToProto(eps *cdbm.ExpectedPowerShelf, defaultBmcUsername, defaultBmcPassword *string, labels map[string]string) *cwssaws.ExpectedPowerShelf {
-	proto := &cwssaws.ExpectedPowerShelf{
-		ExpectedPowerShelfId: &cwssaws.UUID{Value: eps.ID.String()},
-		BmcMacAddress:        eps.BmcMacAddress,
-		ShelfSerialNumber:    eps.ShelfSerialNumber,
-	}
-
-	if eps.IpAddress != nil {
-		proto.BmcIpAddress = *eps.IpAddress
-	}
-	if eps.RackID != nil {
-		proto.RackId = &cwssaws.RackId{Id: *eps.RackID}
-	}
-	if eps.Name != nil {
-		proto.Name = eps.Name
-	}
-	if eps.Manufacturer != nil {
-		proto.Manufacturer = eps.Manufacturer
-	}
-	if eps.Model != nil {
-		proto.Model = eps.Model
-	}
-	if eps.Description != nil {
-		proto.Description = eps.Description
-	}
-	if eps.FirmwareVersion != nil {
-		proto.FirmwareVersion = eps.FirmwareVersion
-	}
-	if eps.SlotID != nil {
-		proto.SlotId = eps.SlotID
-	}
-	if eps.TrayIdx != nil {
-		proto.TrayIdx = eps.TrayIdx
-	}
-	if eps.HostID != nil {
-		proto.HostId = eps.HostID
-	}
-
-	if defaultBmcUsername != nil {
-		proto.BmcUsername = *defaultBmcUsername
-	}
-	if defaultBmcPassword != nil {
-		proto.BmcPassword = *defaultBmcPassword
-	}
-
-	if protoLabels := util.ProtobufLabelsFromAPILabels(labels); protoLabels != nil {
-		proto.Metadata = &cwssaws.Metadata{
-			Labels: protoLabels,
-		}
-	}
-
-	return proto
-}
 
 // ~~~~~ Create Handler ~~~~~ //
 
@@ -253,12 +195,10 @@ func (cepsh CreateExpectedPowerShelfHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Expected Power Shelf due to DB error", nil)
 	}
 
-	createExpectedPowerShelfRequest := expectedPowerShelfToProto(
-		expectedPowerShelf,
-		apiRequest.DefaultBmcUsername,
-		apiRequest.DefaultBmcPassword,
-		apiRequest.Labels,
-	)
+	createExpectedPowerShelfRequest := expectedPowerShelf.ToProto(cdbm.ExpectedPowerShelfCredentials{
+		Username: apiRequest.DefaultBmcUsername,
+		Password: apiRequest.DefaultBmcPassword,
+	})
 
 	logger.Info().Msg("triggering Expected Power Shelf create workflow on Site")
 
@@ -712,12 +652,10 @@ func (uepsh UpdateExpectedPowerShelfHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Expected Power Shelf due to DB error", nil)
 	}
 
-	updateExpectedPowerShelfRequest := expectedPowerShelfToProto(
-		updatedExpectedPowerShelf,
-		apiRequest.DefaultBmcUsername,
-		apiRequest.DefaultBmcPassword,
-		apiRequest.Labels,
-	)
+	updateExpectedPowerShelfRequest := updatedExpectedPowerShelf.ToProto(cdbm.ExpectedPowerShelfCredentials{
+		Username: apiRequest.DefaultBmcUsername,
+		Password: apiRequest.DefaultBmcPassword,
+	})
 
 	logger.Info().Msg("triggering ExpectedPowerShelf update workflow")
 
