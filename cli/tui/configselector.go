@@ -132,14 +132,17 @@ func RunTUI(explicitConfig string) error {
 		apiName = "carbide"
 	}
 
-	token, _ := carbidecli.AutoRefreshTokenToPath(cfg, configPath)
+	token, refreshErr := carbidecli.AutoRefreshTokenToPath(cfg, configPath)
+	if refreshErr != nil {
+		return fmt.Errorf("refreshing auth token: %w", refreshErr)
+	}
 	if token == "" {
 		token = carbidecli.GetAuthToken(cfg)
 	}
-	if token == "" && carbidecli.HasTokenCommandConfig(cfg) {
-		token, err = carbidecli.LoginWithTokenCommand(cfg, configPath, cfg.Auth.TokenCommand)
+	if token == "" && (carbidecli.HasTokenCommandConfig(cfg) || carbidecli.HasOIDCConfig(cfg) || carbidecli.HasAPIKeyConfig(cfg)) {
+		token, err = carbidecli.LoginFromConfig(cfg, configPath)
 		if err != nil {
-			return fmt.Errorf("running auth script: %w", err)
+			return fmt.Errorf("logging in from config: %w", err)
 		}
 	}
 
@@ -169,6 +172,9 @@ func RunTUI(explicitConfig string) error {
 			case carbidecli.AuthRetryActionRetry:
 				fmt.Fprintf(os.Stderr, "%s Retrying API request with refreshed token (%d/%d).\n",
 					Yellow("Auth:"), event.Attempt, event.MaxAttempts)
+			case carbidecli.AuthRetryActionSkip:
+				fmt.Fprintf(os.Stderr, "%s API returned %d for %s; automatic retry skipped for non-idempotent request. Run %s and retry the command.\n",
+					Yellow("Auth:"), event.StatusCode, event.Method, Bold("login"))
 			}
 		}
 	}

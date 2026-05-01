@@ -131,7 +131,7 @@ carbidecli --auth-script /path/to/get-carbide-token.sh login
 carbidecli --keycloak-url http://localhost:8080 login --username admin@example.com
 ```
 
-Tokens are saved to `~/.carbide/config.yaml`. OIDC is refreshed when possible; TUI mode reruns the configured auth method after `401 Unauthorized` API responses and retries the request up to three times, logging each auth refresh/retry attempt.
+Tokens are saved to the active config file (`~/.carbide/config.yaml` by default, or the path selected with `--config` / the TUI config selector). OIDC is refreshed when possible; TUI mode reruns the configured auth method after `401 Unauthorized` API responses and retries safe read requests up to three times, logging each auth refresh/retry attempt.
 
 ## Usage
 

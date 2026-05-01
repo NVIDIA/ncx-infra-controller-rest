@@ -91,6 +91,9 @@ func LoginCommand() *cli.Command {
 				if authnURL == "" && cfg.Auth.APIKey != nil && cfg.Auth.APIKey.AuthnURL != "" {
 					authnURL = cfg.Auth.APIKey.AuthnURL
 				}
+				if authnURL == "" {
+					return fmt.Errorf("authn-url must be provided when using --api-key")
+				}
 				return loginWithAPIKey(cfg, authnURL, apiKey)
 			}
 
@@ -509,6 +512,8 @@ func AutoRefreshTokenToPath(cfg *ConfigFile, configPath string) (string, error) 
 
 func saveOIDCToken(oidc *ConfigOIDC, tokenResp *TokenResponse) {
 	oidc.Token = tokenResp.AccessToken
-	oidc.RefreshToken = tokenResp.RefreshToken
+	if tokenResp.RefreshToken != "" {
+		oidc.RefreshToken = tokenResp.RefreshToken
+	}
 	oidc.ExpiresAt = time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second).Format(time.RFC3339)
 }

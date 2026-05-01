@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	cli "github.com/urfave/cli/v2"
 )
 
@@ -70,9 +71,7 @@ func TestExtractNGCToken(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := extractNGCToken([]byte(tt.body))
-			if got != tt.want {
-				t.Errorf("extractNGCToken(%q) = %q, want %q", tt.body, got, tt.want)
-			}
+			require.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -83,41 +82,25 @@ func TestLoginWithTokenCommandSavesTokenAndCommand(t *testing.T) {
 	cfg := &ConfigFile{}
 
 	token, err := LoginWithTokenCommand(cfg, configPath, "printf script-token")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if token != "script-token" {
-		t.Fatalf("token = %q, want script-token", token)
-	}
+	require.NoError(t, err)
+	require.Equal(t, "script-token", token)
 
 	loaded, err := LoadConfigFromPath(configPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if loaded.Auth.Token != "script-token" {
-		t.Errorf("saved token = %q, want script-token", loaded.Auth.Token)
-	}
-	if loaded.Auth.TokenCommand != "printf script-token" {
-		t.Errorf("saved token command = %q", loaded.Auth.TokenCommand)
-	}
+	require.NoError(t, err)
+	require.Equal(t, "script-token", loaded.Auth.Token)
+	require.Equal(t, "printf script-token", loaded.Auth.TokenCommand)
 }
 
 func TestLoginWithTokenCommandRejectsEmptyOutput(t *testing.T) {
 	cfg := &ConfigFile{}
 	_, err := LoginWithTokenCommand(cfg, filepath.Join(t.TempDir(), "config.yaml"), "printf ''")
-	if err == nil {
-		t.Fatal("expected empty token error")
-	}
+	require.Error(t, err)
 }
 
 func TestAutoRefreshTokenToPathSavesSelectedConfig(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if err := r.ParseForm(); err != nil {
-			t.Fatal(err)
-		}
-		if got := r.Form.Get("grant_type"); got != "refresh_token" {
-			t.Fatalf("grant_type = %q", got)
-		}
+		require.NoError(t, r.ParseForm())
+		require.Equal(t, "refresh_token", r.Form.Get("grant_type"))
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"access_token":"new-token","refresh_token":"new-refresh","expires_in":3600}`))
 	}))
@@ -142,30 +125,27 @@ func TestAutoRefreshTokenToPathSavesSelectedConfig(t *testing.T) {
 	}
 
 	token, err := AutoRefreshTokenToPath(cfg, selectedPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if token != "new-token" {
-		t.Fatalf("token = %q, want new-token", token)
-	}
+	require.NoError(t, err)
+	require.Equal(t, "new-token", token)
 
 	selected, err := LoadConfigFromPath(selectedPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if selected.Auth.OIDC.Token != "new-token" {
-		t.Fatalf("selected config token = %q", selected.Auth.OIDC.Token)
-	}
-	if _, err := os.Stat(defaultPath); !os.IsNotExist(err) {
-		t.Fatalf("default config should not be written, stat err=%v", err)
-	}
+	require.NoError(t, err)
+	require.Equal(t, "new-token", selected.Auth.OIDC.Token)
+	_, err = os.Stat(defaultPath)
+	require.True(t, os.IsNotExist(err), "default config should not be written, stat err=%v", err)
+}
+
+func TestSaveOIDCTokenPreservesExistingRefreshTokenWhenOmitted(t *testing.T) {
+	oidc := &ConfigOIDC{RefreshToken: "existing-refresh"}
+	saveOIDCToken(oidc, &TokenResponse{AccessToken: "new-token", ExpiresIn: 3600})
+	require.Equal(t, "new-token", oidc.Token)
+	require.Equal(t, "existing-refresh", oidc.RefreshToken)
+	require.NotEmpty(t, oidc.ExpiresAt)
 }
 
 func TestLoginCommandExplicitAPIKeyWinsOverOIDCFlags(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got := r.Header.Get("Authorization"); got != "ApiKey explicit-key" {
-			t.Fatalf("Authorization = %q, want ApiKey explicit-key", got)
-		}
+		require.Equal(t, "ApiKey explicit-key", r.Header.Get("Authorization"))
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"token":"api-token"}`))
 	}))
@@ -183,9 +163,7 @@ func TestLoginCommandExplicitAPIKeyWinsOverOIDCFlags(t *testing.T) {
 			},
 		},
 	}
-	if err := SaveConfigToPath(cfg, configPath); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, SaveConfigToPath(cfg, configPath))
 	SetConfigPath(configPath)
 	defer SetConfigPath("")
 
@@ -193,23 +171,30 @@ func TestLoginCommandExplicitAPIKeyWinsOverOIDCFlags(t *testing.T) {
 	for _, name := range []string{"api-key", "authn-url", "token-url", "keycloak-url", "keycloak-realm", "client-id", "client-secret", "username", "password", "token-command"} {
 		flags.String(name, "", "")
 	}
-	if err := flags.Set("api-key", "explicit-key"); err != nil {
-		t.Fatal(err)
-	}
-	if err := flags.Set("token-url", "https://oidc.example.invalid/token"); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, flags.Set("api-key", "explicit-key"))
+	require.NoError(t, flags.Set("token-url", "https://oidc.example.invalid/token"))
 
 	ctx := cli.NewContext(cli.NewApp(), flags, nil)
-	if err := LoginCommand().Action(ctx); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, LoginCommand().Action(ctx))
 
 	loaded, err := LoadConfigFromPath(configPath)
-	if err != nil {
-		t.Fatal(err)
+	require.NoError(t, err)
+	require.Equal(t, "api-token", loaded.Auth.APIKey.Token)
+}
+
+func TestLoginCommandExplicitAPIKeyRequiresAuthnURL(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	SetConfigPath(configPath)
+	defer SetConfigPath("")
+
+	flags := flag.NewFlagSet("login", flag.ContinueOnError)
+	for _, name := range []string{"api-key", "authn-url", "token-url", "keycloak-url", "keycloak-realm", "client-id", "client-secret", "username", "password", "token-command"} {
+		flags.String(name, "", "")
 	}
-	if loaded.Auth.APIKey.Token != "api-token" {
-		t.Fatalf("api key token = %q, want api-token", loaded.Auth.APIKey.Token)
-	}
+	require.NoError(t, flags.Set("api-key", "explicit-key"))
+
+	ctx := cli.NewContext(cli.NewApp(), flags, nil)
+	err := LoginCommand().Action(ctx)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "authn-url")
 }

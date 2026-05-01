@@ -18,9 +18,13 @@
 package carbidecli
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestClientDoRefreshesTokenOnUnauthorizedAndRetries(t *testing.T) {
@@ -32,7 +36,7 @@ func TestClientDoRefreshesTokenOnUnauthorizedAndRetries(t *testing.T) {
 			return
 		}
 		if got := r.Header.Get("Authorization"); got != "Bearer refreshed-token" {
-			t.Fatalf("Authorization = %q, want Bearer refreshed-token", got)
+			require.Equal(t, "Bearer refreshed-token", got)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"ok":true}`))
@@ -47,18 +51,10 @@ func TestClientDoRefreshesTokenOnUnauthorizedAndRetries(t *testing.T) {
 	}
 
 	body, _, err := client.Do("GET", "/v2/org/{org}/carbide/test", nil, nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(body) != `{"ok":true}` {
-		t.Fatalf("body = %s", string(body))
-	}
-	if requests != 2 {
-		t.Fatalf("requests = %d, want 2", requests)
-	}
-	if refreshes != 1 {
-		t.Fatalf("refreshes = %d, want 1", refreshes)
-	}
+	require.NoError(t, err)
+	require.Equal(t, `{"ok":true}`, string(body))
+	require.Equal(t, 2, requests)
+	require.Equal(t, 1, refreshes)
 }
 
 func TestClientDoRetriesUnauthorizedAtMostThreeTimes(t *testing.T) {
@@ -82,34 +78,95 @@ func TestClientDoRetriesUnauthorizedAtMostThreeTimes(t *testing.T) {
 
 	_, _, err := client.Do("GET", "/v2/org/{org}/carbide/test", nil, nil, nil)
 	apiErr, ok := err.(*APIError)
-	if !ok {
-		t.Fatalf("err = %T, want *APIError", err)
-	}
-	if apiErr.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("status = %d, want %d", apiErr.StatusCode, http.StatusUnauthorized)
-	}
-	if requests != 4 {
-		t.Fatalf("requests = %d, want 4", requests)
-	}
-	if refreshes != 3 {
-		t.Fatalf("refreshes = %d, want 3", refreshes)
-	}
-	if len(events) != 6 {
-		t.Fatalf("events = %d, want 6", len(events))
-	}
+	require.True(t, ok, "err = %T, want *APIError", err)
+	require.Equal(t, http.StatusUnauthorized, apiErr.StatusCode)
+	require.Equal(t, 4, requests)
+	require.Equal(t, 3, refreshes)
+	require.Len(t, events, 6)
 	for i := 0; i < 3; i++ {
 		login := events[i*2]
 		retry := events[i*2+1]
-		if login.Action != AuthRetryActionLogin || retry.Action != AuthRetryActionRetry {
-			t.Fatalf("events[%d:%d] = %s/%s, want login/retry", i*2, i*2+1, login.Action, retry.Action)
-		}
-		if login.Attempt != i+1 || retry.Attempt != i+1 {
-			t.Fatalf("attempt pair %d = %d/%d, want %d", i, login.Attempt, retry.Attempt, i+1)
-		}
-		if login.MaxAttempts != 3 || retry.MaxAttempts != 3 {
-			t.Fatalf("max attempts = %d/%d, want 3", login.MaxAttempts, retry.MaxAttempts)
-		}
+		require.Equal(t, AuthRetryActionLogin, login.Action)
+		require.Equal(t, AuthRetryActionRetry, retry.Action)
+		require.Equal(t, i+1, login.Attempt)
+		require.Equal(t, i+1, retry.Attempt)
+		require.Equal(t, 3, login.MaxAttempts)
+		require.Equal(t, 3, retry.MaxAttempts)
 	}
+}
+
+func TestClientDoDoesNotReplayNonIdempotentRequestAfterUnauthorized(t *testing.T) {
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests++
+		http.Error(w, `{"message":"expired"}`, http.StatusUnauthorized)
+	}))
+	defer server.Close()
+
+	var events []AuthRetryEvent
+	refreshes := 0
+	client := NewClient(server.URL, "test-org", "stale-token", nil, false)
+	client.TokenRefresh = func() (string, error) {
+		refreshes++
+		return "new-token", nil
+	}
+	client.AuthRetryNotify = func(event AuthRetryEvent) {
+		events = append(events, event)
+	}
+
+	_, _, err := client.Do("POST", "/v2/org/{org}/carbide/test", nil, nil, []byte(`{"name":"x"}`))
+	apiErr, ok := err.(*APIError)
+	require.True(t, ok, "err = %T, want *APIError", err)
+	require.Equal(t, http.StatusUnauthorized, apiErr.StatusCode)
+	require.Equal(t, 1, requests)
+	require.Equal(t, 0, refreshes)
+	require.Len(t, events, 1)
+	require.Equal(t, AuthRetryActionSkip, events[0].Action)
+	require.Equal(t, http.MethodPost, events[0].Method)
+}
+
+func TestClientDoReturnsRefreshErrorWithoutRetrying(t *testing.T) {
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests++
+		http.Error(w, `{"message":"expired"}`, http.StatusUnauthorized)
+	}))
+	defer server.Close()
+
+	refreshes := 0
+	client := NewClient(server.URL, "test-org", "stale-token", nil, false)
+	client.TokenRefresh = func() (string, error) {
+		refreshes++
+		return "", errors.New("refresh failed")
+	}
+
+	_, _, err := client.Do("GET", "/v2/org/{org}/carbide/test", nil, nil, nil)
+	require.Error(t, err)
+	require.True(t, strings.Contains(err.Error(), "refresh failed"), "err = %v", err)
+	require.Equal(t, 1, requests)
+	require.Equal(t, 1, refreshes)
+}
+
+func TestClientDoReturnsEmptyTokenErrorWithoutRetrying(t *testing.T) {
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests++
+		http.Error(w, `{"message":"expired"}`, http.StatusUnauthorized)
+	}))
+	defer server.Close()
+
+	refreshes := 0
+	client := NewClient(server.URL, "test-org", "stale-token", nil, false)
+	client.TokenRefresh = func() (string, error) {
+		refreshes++
+		return "", nil
+	}
+
+	_, _, err := client.Do("GET", "/v2/org/{org}/carbide/test", nil, nil, nil)
+	require.Error(t, err)
+	require.True(t, strings.Contains(err.Error(), "no token returned"), "err = %v", err)
+	require.Equal(t, 1, requests)
+	require.Equal(t, 1, refreshes)
 }
 
 func TestClientDoReturnsUnauthorizedWhenNoRefreshFunc(t *testing.T) {
@@ -121,12 +178,8 @@ func TestClientDoReturnsUnauthorizedWhenNoRefreshFunc(t *testing.T) {
 	client := NewClient(server.URL, "test-org", "stale-token", nil, false)
 	_, _, err := client.Do("GET", "/v2/org/{org}/carbide/test", nil, nil, nil)
 	apiErr, ok := err.(*APIError)
-	if !ok {
-		t.Fatalf("err = %T, want *APIError", err)
-	}
-	if apiErr.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("status = %d, want %d", apiErr.StatusCode, http.StatusUnauthorized)
-	}
+	require.True(t, ok, "err = %T, want *APIError", err)
+	require.Equal(t, http.StatusUnauthorized, apiErr.StatusCode)
 }
 
 func TestClientDoDoesNotRefreshOnForbidden(t *testing.T) {
@@ -144,13 +197,7 @@ func TestClientDoDoesNotRefreshOnForbidden(t *testing.T) {
 
 	_, _, err := client.Do("GET", "/v2/org/{org}/carbide/test", nil, nil, nil)
 	apiErr, ok := err.(*APIError)
-	if !ok {
-		t.Fatalf("err = %T, want *APIError", err)
-	}
-	if apiErr.StatusCode != http.StatusForbidden {
-		t.Fatalf("status = %d, want %d", apiErr.StatusCode, http.StatusForbidden)
-	}
-	if refreshes != 0 {
-		t.Fatalf("refreshes = %d, want 0", refreshes)
-	}
+	require.True(t, ok, "err = %T, want *APIError", err)
+	require.Equal(t, http.StatusForbidden, apiErr.StatusCode)
+	require.Equal(t, 0, refreshes)
 }

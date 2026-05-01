@@ -51,6 +51,7 @@ type AuthRetryAction string
 const (
 	AuthRetryActionLogin AuthRetryAction = "login"
 	AuthRetryActionRetry AuthRetryAction = "retry"
+	AuthRetryActionSkip  AuthRetryAction = "skip"
 	defaultAuthRetryMax                  = 3
 )
 
@@ -60,6 +61,7 @@ type AuthRetryEvent struct {
 	MaxAttempts int
 	StatusCode  int
 	Status      string
+	Method      string
 }
 
 type APIError struct {
@@ -112,6 +114,19 @@ func (c *Client) rewriteAPIName(path string) string {
 // Do executes an HTTP request against the API.
 func (c *Client) Do(method, pathTemplate string, pathParams, queryParams map[string]string, body []byte) ([]byte, http.Header, error) {
 	respBody, respHeader, err := c.do(method, pathTemplate, pathParams, queryParams, body)
+	if isUnauthorizedError(err) && c.TokenRefresh != nil && !canReplayAfterAuthRefresh(method) {
+		apiErr := err.(*APIError)
+		c.notifyAuthRetry(AuthRetryEvent{
+			Action:      AuthRetryActionSkip,
+			Attempt:     0,
+			MaxAttempts: c.authRetryMax(),
+			StatusCode:  apiErr.StatusCode,
+			Status:      apiErr.Status,
+			Method:      method,
+		})
+		return respBody, respHeader, err
+	}
+
 	maxAttempts := c.authRetryMax()
 	for attempt := 1; attempt <= maxAttempts && isUnauthorizedError(err) && c.TokenRefresh != nil; attempt++ {
 		apiErr := err.(*APIError)
@@ -121,6 +136,7 @@ func (c *Client) Do(method, pathTemplate string, pathParams, queryParams map[str
 			MaxAttempts: maxAttempts,
 			StatusCode:  apiErr.StatusCode,
 			Status:      apiErr.Status,
+			Method:      method,
 		})
 		token, refreshErr := c.TokenRefresh()
 		if refreshErr != nil {
@@ -136,6 +152,7 @@ func (c *Client) Do(method, pathTemplate string, pathParams, queryParams map[str
 			MaxAttempts: maxAttempts,
 			StatusCode:  apiErr.StatusCode,
 			Status:      apiErr.Status,
+			Method:      method,
 		})
 		respBody, respHeader, err = c.do(method, pathTemplate, pathParams, queryParams, body)
 	}
@@ -152,6 +169,15 @@ func (c *Client) authRetryMax() int {
 func (c *Client) notifyAuthRetry(event AuthRetryEvent) {
 	if c.AuthRetryNotify != nil {
 		c.AuthRetryNotify(event)
+	}
+}
+
+func canReplayAfterAuthRefresh(method string) bool {
+	switch strings.ToUpper(method) {
+	case http.MethodGet, http.MethodHead, http.MethodOptions:
+		return true
+	default:
+		return false
 	}
 }
 
