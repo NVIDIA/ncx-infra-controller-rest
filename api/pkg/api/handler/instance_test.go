@@ -4137,6 +4137,8 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 		expectedNetworkSecurityGroupInherited *bool
 		expectedPropagationDetailedStatus     *string
 		expectedPropagationStatus             *string
+		// When true, only assert len(siteReq.Config.Nvlink.GpuConfigs) matches the request (e.g. NVLink no-op where workflow uses DB order).
+		nvLinkGpuConfigsVerifyCountOnly bool
 	}
 
 	tests := []struct {
@@ -5658,7 +5660,36 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "test Instance update API endpoint success with NVLink interface update to same partition (no-op update allowed)",
+			name: "test Instance update API endpoint success when NVLink interfaces unchanged (no-op, multiset order)",
+			fields: fields{
+				dbSession: dbSession,
+				tc:        tc,
+				scp:       scp,
+				cfg:       cfg,
+			},
+			args: args{
+				reqData: &model.APIInstanceUpdateRequest{
+					IpxeScript: os2.IpxeScript,
+					// Same four bindings as DB; order differs from DB creation order — handler no-op, workflow still sends all GPUs.
+					NVLinkInterfaces: []model.APINVLinkInterfaceCreateOrUpdateRequest{
+						{NVLinkLogicalPartitionID: nvllp2.ID.String(), DeviceInstance: 3},
+						{NVLinkLogicalPartitionID: nvllp1.ID.String(), DeviceInstance: 0},
+						{NVLinkLogicalPartitionID: nvllp2.ID.String(), DeviceInstance: 2},
+						{NVLinkLogicalPartitionID: nvllp1.ID.String(), DeviceInstance: 1},
+					},
+				},
+				reqInstance:                     inst13.ID.String(),
+				reqOrg:                          tnOrg1,
+				reqUser:                         tnu1,
+				respCode:                        http.StatusOK,
+				nvLinkGpuConfigsVerifyCountOnly: true,
+			},
+			wantErr:                     false,
+			verifySiteControllerRequest: true,
+			verifyChildSpanner:          true,
+		},
+		{
+			name: "test Instance update API endpoint success with NVLink interface subset replacing full set",
 			fields: fields{
 				dbSession: dbSession,
 				tc:        tc,
@@ -6120,9 +6151,12 @@ func TestUpdateInstanceHandler_Handle(t *testing.T) {
 					if len(tt.args.reqData.NVLinkInterfaces) > 0 {
 						assert.Equal(t, len(siteReq.Config.Nvlink.GpuConfigs), len(tt.args.reqData.NVLinkInterfaces))
 
-						// Make sure order to should be same as the request received
-						for i := range siteReq.Config.Nvlink.GpuConfigs {
-							assert.Equal(t, siteReq.Config.Nvlink.GpuConfigs[i].LogicalPartitionId.Value, tt.args.reqData.NVLinkInterfaces[i].NVLinkLogicalPartitionID)
+						if !tt.args.nvLinkGpuConfigsVerifyCountOnly {
+							// Make sure order to should be same as the request received
+							for i := range siteReq.Config.Nvlink.GpuConfigs {
+								assert.Equal(t, siteReq.Config.Nvlink.GpuConfigs[i].LogicalPartitionId.Value, tt.args.reqData.NVLinkInterfaces[i].NVLinkLogicalPartitionID)
+								assert.Equal(t, siteReq.Config.Nvlink.GpuConfigs[i].DeviceInstance, uint32(tt.args.reqData.NVLinkInterfaces[i].DeviceInstance))
+							}
 						}
 					}
 
