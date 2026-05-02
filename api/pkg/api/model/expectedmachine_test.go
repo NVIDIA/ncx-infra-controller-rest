@@ -356,13 +356,16 @@ func TestAPIExpectedMachineUpdateRequest_Validate(t *testing.T) {
 			expectErr: false,
 		},
 		{
-			desc: "ok with nil values for all optional fields",
+			desc:      "error when no update fields are provided",
+			obj:       APIExpectedMachineUpdateRequest{},
+			expectErr: true,
+		},
+		{
+			desc: "error when only ID is provided",
 			obj: APIExpectedMachineUpdateRequest{
-				ChassisSerialNumber:      nil,
-				FallbackDPUSerialNumbers: nil,
-				Labels:                   nil,
+				ID: cdb.GetStrPtr(uuid.New().String()),
 			},
-			expectErr: false,
+			expectErr: true,
 		},
 		{
 			desc: "error when chassis serial number is empty string",
@@ -404,6 +407,14 @@ func TestAPIExpectedMachineUpdateRequest_Validate(t *testing.T) {
 				DefaultBmcUsername:  &validUsername,
 				DefaultBmcPassword:  &validPassword,
 				Labels:              map[string]string{"env": "test"},
+			},
+			expectErr: false,
+		},
+		{
+			desc: "ok when only BMC credentials are provided",
+			obj: APIExpectedMachineUpdateRequest{
+				DefaultBmcUsername: &validUsername,
+				DefaultBmcPassword: &validPassword,
 			},
 			expectErr: false,
 		},

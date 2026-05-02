@@ -154,6 +154,27 @@ type APIExpectedMachineUpdateRequest struct {
 	Labels map[string]string `json:"labels"`
 }
 
+// IsUpdateRequest returns true when the request contains at least one field
+// that changes the ExpectedMachine record or the site-side representation.
+func (emur *APIExpectedMachineUpdateRequest) IsUpdateRequest() bool {
+	return emur.BmcMacAddress != nil ||
+		emur.DefaultBmcUsername != nil ||
+		emur.DefaultBmcPassword != nil ||
+		emur.ChassisSerialNumber != nil ||
+		emur.FallbackDPUSerialNumbers != nil ||
+		emur.SkuID != nil ||
+		emur.RackID != nil ||
+		emur.Name != nil ||
+		emur.Manufacturer != nil ||
+		emur.Model != nil ||
+		emur.Description != nil ||
+		emur.FirmwareVersion != nil ||
+		emur.SlotID != nil ||
+		emur.TrayIdx != nil ||
+		emur.HostID != nil ||
+		emur.Labels != nil
+}
+
 // Validate ensure the values passed in request are acceptable
 func (emur *APIExpectedMachineUpdateRequest) Validate() error {
 	if emur.ID != nil {
@@ -203,6 +224,12 @@ func (emur *APIExpectedMachineUpdateRequest) Validate() error {
 
 	if err != nil {
 		return err
+	}
+
+	if !emur.IsUpdateRequest() {
+		return validation.Errors{
+			validationCommonErrorField: errors.New("no updates specified. At least one Expected Machine update field must be specified"),
+		}
 	}
 
 	if err := util.ValidateLabels(emur.Labels); err != nil {
