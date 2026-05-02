@@ -19,7 +19,6 @@ package managers
 
 import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/bootstrap"
-	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/carbide"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/dpuextensionservice"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/expectedmachine"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/expectedpowershelf"
@@ -31,6 +30,7 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/machinevalidation"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/managerapi"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/networksecuritygroup"
+	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/nico"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/nvlinklogicalpartition"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/operatingsystem"
 	"github.com/NVIDIA/ncx-infra-controller-rest/site-agent/pkg/components/managers/rla"
@@ -84,8 +84,8 @@ func (m *Manager) VpcPeering() *vpcpeering.API {
 }
 
 // Carbide manager instance here
-func (m *Manager) Carbide() *carbide.API {
-	return carbide.NewCarbideManager(m.Data.EB, m.API, m.Conf)
+func (m *Manager) NICo() *nico.API {
+	return nico.NewNICoManager(m.Data.EB, m.API, m.Conf)
 }
 
 // Machine - Add Machine manager instance here

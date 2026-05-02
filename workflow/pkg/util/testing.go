@@ -34,6 +34,7 @@ import (
 	cdbm "github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/model"
 	sc "github.com/NVIDIA/ncx-infra-controller-rest/workflow/pkg/client/site"
 
+	authz "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/authorization"
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/util"
 	"github.com/NVIDIA/ncx-infra-controller-rest/workflow/internal/config"
 )
@@ -853,7 +854,7 @@ func TestAssertMetricExistsTimes(t *testing.T, reg *prometheus.Registry, metricN
 // This is a common utility for all inventory metrics testing
 func TestSetupSite(t *testing.T, dbSession *cdb.Session) *cdbm.Site {
 	ipOrg := "test-provider-org"
-	ipRoles := []string{"FORGE_PROVIDER_ADMIN"}
+	ipRoles := []string{authz.ProviderAdminRole}
 
 	ipu := TestBuildUser(t, dbSession, uuid.NewString(), []string{ipOrg}, ipRoles)
 	ip := TestBuildInfrastructureProvider(t, dbSession, "test-provider", ipOrg, ipu)
