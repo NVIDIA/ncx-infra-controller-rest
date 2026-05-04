@@ -79,6 +79,25 @@ func TestIsValidOperation(t *testing.T) {
 			operation: SequenceColdReset,
 			want:      true,
 		},
+		// Valid bring-up task type operations
+		{
+			name:      "valid bring_up",
+			opType:    common.TaskTypeBringUp,
+			operation: SequenceBringUp,
+			want:      true,
+		},
+		{
+			name:      "valid ingest",
+			opType:    common.TaskTypeBringUp,
+			operation: SequenceIngest,
+			want:      true,
+		},
+		{
+			name:      "valid bring_down",
+			opType:    common.TaskTypeBringUp,
+			operation: SequenceBringDown,
+			want:      true,
+		},
 		// Valid firmware control operations
 		{
 			name:      "valid upgrade",

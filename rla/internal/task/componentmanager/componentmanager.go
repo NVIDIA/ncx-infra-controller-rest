@@ -75,6 +75,16 @@ type FirmwareConsistencyChecker interface {
 	VerifyFirmwareConsistency(ctx context.Context, target common.Target) error
 }
 
+// PowerOnGateController is an optional interface for component managers that
+// expose a power-on gate independent of the regular power state. It is the
+// inverse-side counterpart to BringUpController.
+type PowerOnGateController interface {
+	// PausePowerOnGate moves the power-on gate to a paused state for each
+	// target component, preventing the power manager from automatically
+	// powering the component back on. Implementations should be idempotent.
+	PausePowerOnGate(ctx context.Context, target common.Target) error
+}
+
 // ManagerFactory is a function that creates a ComponentManager instance.
 // It receives a ProviderRegistry from which it can retrieve the providers it needs.
 type ManagerFactory func(providers *ProviderRegistry) (ComponentManager, error)
