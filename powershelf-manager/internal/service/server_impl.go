@@ -234,7 +234,18 @@ func (s *PowershelfManagerServerImpl) UpdateFirmware(ctx context.Context, req *p
 
 	// Direct path: auto-register unregistered targets, then upgrade
 	for _, targetReq := range req.Targets {
+		if targetReq == nil {
+			continue
+		}
+
 		target := targetReq.Target
+		if target == nil {
+			responses = append(responses, &pb.UpdatePowershelfFirmwareResponse{
+				Components: fanOutComponentError(targetReq.Components, pb.StatusCode_INVALID_ARGUMENT, "target is required"),
+			})
+			continue
+		}
+
 		resp := &pb.UpdatePowershelfFirmwareResponse{
 			PmcIp: target.GetPmcIpAddress(),
 		}
