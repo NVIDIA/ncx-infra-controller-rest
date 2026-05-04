@@ -18,7 +18,6 @@
 package handler
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,7 +27,6 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/internal/config"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/handler/util/common"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model"
-	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/model/util"
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
 	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
 	cutil "github.com/NVIDIA/ncx-infra-controller-rest/common/pkg/util"
@@ -43,63 +41,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	tclient "go.temporal.io/sdk/client"
 )
-
-// expectedPowerShelfToProto builds the workflow proto. BMC credentials and
-// labels are passed separately because they may come from the API request
-// rather than the DB record (BMC credentials aren't persisted at all).
-func expectedPowerShelfToProto(eps *cdbm.ExpectedPowerShelf, defaultBmcUsername, defaultBmcPassword *string, labels map[string]string) *cwssaws.ExpectedPowerShelf {
-	proto := &cwssaws.ExpectedPowerShelf{
-		ExpectedPowerShelfId: &cwssaws.UUID{Value: eps.ID.String()},
-		BmcMacAddress:        eps.BmcMacAddress,
-		ShelfSerialNumber:    eps.ShelfSerialNumber,
-	}
-
-	if eps.IpAddress != nil {
-		proto.BmcIpAddress = *eps.IpAddress
-	}
-	if eps.RackID != nil {
-		proto.RackId = &cwssaws.RackId{Id: *eps.RackID}
-	}
-	if eps.Name != nil {
-		proto.Name = eps.Name
-	}
-	if eps.Manufacturer != nil {
-		proto.Manufacturer = eps.Manufacturer
-	}
-	if eps.Model != nil {
-		proto.Model = eps.Model
-	}
-	if eps.Description != nil {
-		proto.Description = eps.Description
-	}
-	if eps.FirmwareVersion != nil {
-		proto.FirmwareVersion = eps.FirmwareVersion
-	}
-	if eps.SlotID != nil {
-		proto.SlotId = eps.SlotID
-	}
-	if eps.TrayIdx != nil {
-		proto.TrayIdx = eps.TrayIdx
-	}
-	if eps.HostID != nil {
-		proto.HostId = eps.HostID
-	}
-
-	if defaultBmcUsername != nil {
-		proto.BmcUsername = *defaultBmcUsername
-	}
-	if defaultBmcPassword != nil {
-		proto.BmcPassword = *defaultBmcPassword
-	}
-
-	if protoLabels := util.ProtobufLabelsFromAPILabels(labels); protoLabels != nil {
-		proto.Metadata = &cwssaws.Metadata{
-			Labels: protoLabels,
-		}
-	}
-
-	return proto
-}
 
 // ~~~~~ Create Handler ~~~~~ //
 
@@ -214,84 +155,63 @@ func (cepsh CreateExpectedPowerShelfHandler) Handle(c echo.Context) error {
 		})
 	}
 
-	// Start a db transaction
-	tx, err := cdb.BeginTx(ctx, cepsh.dbSession, &sql.TxOptions{})
+	expectedPowerShelf, err := cdb.WithTxResult(ctx, cepsh.dbSession, func(tx *cdb.Tx) (*cdbm.ExpectedPowerShelf, error) {
+		// Note: DefaultBmcUsername and BmcPassword are not stored in DB, only passed to workflow
+		eps, err := epsDAO.Create(
+			ctx,
+			tx,
+			cdbm.ExpectedPowerShelfCreateInput{
+				ExpectedPowerShelfID: uuid.New(),
+				SiteID:               site.ID,
+				BmcMacAddress:        apiRequest.BmcMacAddress,
+				ShelfSerialNumber:    apiRequest.ShelfSerialNumber,
+				IpAddress:            apiRequest.IpAddress,
+				RackID:               apiRequest.RackID,
+				Name:                 apiRequest.Name,
+				Manufacturer:         apiRequest.Manufacturer,
+				Model:                apiRequest.Model,
+				Description:          apiRequest.Description,
+				FirmwareVersion:      apiRequest.FirmwareVersion,
+				SlotID:               apiRequest.SlotID,
+				TrayIdx:              apiRequest.TrayIdx,
+				HostID:               apiRequest.HostID,
+				Labels:               apiRequest.Labels,
+				CreatedBy:            dbUser.ID,
+			},
+		)
+		if err != nil {
+			logger.Error().Err(err).Msg("error creating ExpectedPowerShelf record in DB")
+			return nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to create Expected Power Shelf due to DB error", nil)
+		}
+
+		createExpectedPowerShelfRequest := eps.ToProto(cdbm.ExpectedPowerShelfCredentials{
+			Username: apiRequest.DefaultBmcUsername,
+			Password: apiRequest.DefaultBmcPassword,
+		})
+
+		logger.Info().Msg("triggering Expected Power Shelf create workflow on Site")
+
+		workflowOptions := tclient.StartWorkflowOptions{
+			ID:                       "expected-power-shelf-create-" + eps.ID.String(),
+			WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
+			TaskQueue:                queue.SiteTaskQueue,
+		}
+
+		stc, err := cepsh.scp.GetClientByID(site.ID)
+		if err != nil {
+			logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
+			return nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		}
+
+		if apiErr := common.ExecuteSyncWorkflow(ctx, logger, stc, "CreateExpectedPowerShelf", workflowOptions, createExpectedPowerShelfRequest); apiErr != nil {
+			return nil, apiErr
+		}
+		return eps, nil
+	})
 	if err != nil {
-		logger.Error().Err(err).Msg("unable to start transaction")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Expected Power Shelf due to DB transaction error", nil)
-	}
-	// this variable is used in cleanup actions to indicate if this transaction committed
-	txCommitted := false
-	defer common.RollbackTx(ctx, tx, &txCommitted)
-
-	// Create the ExpectedPowerShelf in DB
-	// Note: DefaultBmcUsername and BmcPassword are not stored in DB, only passed to workflow
-	expectedPowerShelf, err := epsDAO.Create(
-		ctx,
-		tx,
-		cdbm.ExpectedPowerShelfCreateInput{
-			ExpectedPowerShelfID: uuid.New(),
-			SiteID:               site.ID,
-			BmcMacAddress:        apiRequest.BmcMacAddress,
-			ShelfSerialNumber:    apiRequest.ShelfSerialNumber,
-			IpAddress:            apiRequest.IpAddress,
-			RackID:               apiRequest.RackID,
-			Name:                 apiRequest.Name,
-			Manufacturer:         apiRequest.Manufacturer,
-			Model:                apiRequest.Model,
-			Description:          apiRequest.Description,
-			FirmwareVersion:      apiRequest.FirmwareVersion,
-			SlotID:               apiRequest.SlotID,
-			TrayIdx:              apiRequest.TrayIdx,
-			HostID:               apiRequest.HostID,
-			Labels:               apiRequest.Labels,
-			CreatedBy:            dbUser.ID,
-		},
-	)
-	if err != nil {
-		logger.Error().Err(err).Msg("error creating ExpectedPowerShelf record in DB")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Expected Power Shelf due to DB error", nil)
+		return common.HandleTxError(c, logger, err, "Failed to create Expected Power Shelf due to DB transaction error")
 	}
 
-	createExpectedPowerShelfRequest := expectedPowerShelfToProto(
-		expectedPowerShelf,
-		apiRequest.DefaultBmcUsername,
-		apiRequest.DefaultBmcPassword,
-		apiRequest.Labels,
-	)
-
-	logger.Info().Msg("triggering Expected Power Shelf create workflow on Site")
-
-	// Create workflow options
-	workflowOptions := tclient.StartWorkflowOptions{
-		ID:                       "expected-power-shelf-create-" + expectedPowerShelf.ID.String(),
-		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
-		TaskQueue:                queue.SiteTaskQueue,
-	}
-
-	// Get the temporal client for the site we are working with
-	stc, err := cepsh.scp.GetClientByID(site.ID)
-	if err != nil {
-		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
-	}
-
-	// Run workflow
-	apiErr := common.ExecuteSyncWorkflow(ctx, logger, stc, "CreateExpectedPowerShelf", workflowOptions, createExpectedPowerShelfRequest)
-	if apiErr != nil {
-		return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
-	}
-
-	// Commit transaction
-	err = tx.Commit()
-	if err != nil {
-		logger.Error().Err(err).Msg("error committing ExpectedPowerShelf transaction to DB")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to create Expected Power Shelf due to DB transaction error", nil)
-	}
-	// Set committed so, deferred cleanup functions will do nothing
-	txCommitted = true
-
-	// Create response
 	apiExpectedPowerShelf := model.NewAPIExpectedPowerShelf(expectedPowerShelf)
 
 	logger.Info().Msg("finishing API handler")
@@ -674,83 +594,61 @@ func (uepsh UpdateExpectedPowerShelfHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Current org is not associated with the Site of the Expected Power Shelf", nil)
 	}
 
-	// Start a db tx
-	tx, err := cdb.BeginTx(ctx, uepsh.dbSession, &sql.TxOptions{})
+	updatedExpectedPowerShelf, err := cdb.WithTxResult(ctx, uepsh.dbSession, func(tx *cdb.Tx) (*cdbm.ExpectedPowerShelf, error) {
+		// Note: DefaultBmcUsername and BmcPassword are not stored in DB, only passed to workflow
+		eps, err := epsDAO.Update(
+			ctx,
+			tx,
+			cdbm.ExpectedPowerShelfUpdateInput{
+				ExpectedPowerShelfID: expectedPowerShelf.ID,
+				BmcMacAddress:        apiRequest.BmcMacAddress,
+				ShelfSerialNumber:    apiRequest.ShelfSerialNumber,
+				IpAddress:            apiRequest.IpAddress,
+				RackID:               apiRequest.RackID,
+				Name:                 apiRequest.Name,
+				Manufacturer:         apiRequest.Manufacturer,
+				Model:                apiRequest.Model,
+				Description:          apiRequest.Description,
+				FirmwareVersion:      apiRequest.FirmwareVersion,
+				SlotID:               apiRequest.SlotID,
+				TrayIdx:              apiRequest.TrayIdx,
+				HostID:               apiRequest.HostID,
+				Labels:               apiRequest.Labels,
+			},
+		)
+		if err != nil {
+			logger.Error().Err(err).Msg("failed to update ExpectedPowerShelf record in DB")
+			return nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to update Expected Power Shelf due to DB error", nil)
+		}
+
+		updateExpectedPowerShelfRequest := eps.ToProto(cdbm.ExpectedPowerShelfCredentials{
+			Username: apiRequest.DefaultBmcUsername,
+			Password: apiRequest.DefaultBmcPassword,
+		})
+
+		logger.Info().Msg("triggering ExpectedPowerShelf update workflow")
+
+		workflowOptions := tclient.StartWorkflowOptions{
+			ID:                       "expected-power-shelf-update-" + expectedPowerShelf.ID.String(),
+			WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
+			TaskQueue:                queue.SiteTaskQueue,
+		}
+
+		stc, err := uepsh.scp.GetClientByID(site.ID)
+		if err != nil {
+			logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
+			return nil, cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		}
+
+		if apiErr := common.ExecuteSyncWorkflow(ctx, logger, stc, "UpdateExpectedPowerShelf", workflowOptions, updateExpectedPowerShelfRequest); apiErr != nil {
+			return nil, apiErr
+		}
+		return eps, nil
+	})
 	if err != nil {
-		logger.Error().Err(err).Msg("unable to start transaction")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Expected Power Shelf due to DB transaction error", nil)
-	}
-	// this variable is used in cleanup actions to indicate if this transaction committed
-	txCommitted := false
-	defer common.RollbackTx(ctx, tx, &txCommitted)
-
-	// Update ExpectedPowerShelf in DB
-	// Note: DefaultBmcUsername and BmcPassword are not stored in DB, only passed to workflow
-
-	updatedExpectedPowerShelf, err := epsDAO.Update(
-		ctx,
-		tx,
-		cdbm.ExpectedPowerShelfUpdateInput{
-			ExpectedPowerShelfID: expectedPowerShelf.ID,
-			BmcMacAddress:        apiRequest.BmcMacAddress,
-			ShelfSerialNumber:    apiRequest.ShelfSerialNumber,
-			IpAddress:            apiRequest.IpAddress,
-			RackID:               apiRequest.RackID,
-			Name:                 apiRequest.Name,
-			Manufacturer:         apiRequest.Manufacturer,
-			Model:                apiRequest.Model,
-			Description:          apiRequest.Description,
-			FirmwareVersion:      apiRequest.FirmwareVersion,
-			SlotID:               apiRequest.SlotID,
-			TrayIdx:              apiRequest.TrayIdx,
-			HostID:               apiRequest.HostID,
-			Labels:               apiRequest.Labels,
-		},
-	)
-	if err != nil {
-		logger.Error().Err(err).Msg("failed to update ExpectedPowerShelf record in DB")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update Expected Power Shelf due to DB error", nil)
+		return common.HandleTxError(c, logger, err, "Failed to update Expected Power Shelf due to DB transaction error")
 	}
 
-	updateExpectedPowerShelfRequest := expectedPowerShelfToProto(
-		updatedExpectedPowerShelf,
-		apiRequest.DefaultBmcUsername,
-		apiRequest.DefaultBmcPassword,
-		apiRequest.Labels,
-	)
-
-	logger.Info().Msg("triggering ExpectedPowerShelf update workflow")
-
-	// Create workflow options
-	workflowOptions := tclient.StartWorkflowOptions{
-		ID:                       "expected-power-shelf-update-" + expectedPowerShelf.ID.String(),
-		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
-		TaskQueue:                queue.SiteTaskQueue,
-	}
-
-	// Get the Temporal client for the site we are working with
-	stc, err := uepsh.scp.GetClientByID(site.ID)
-	if err != nil {
-		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
-	}
-
-	// Run workflow
-	apiErr := common.ExecuteSyncWorkflow(ctx, logger, stc, "UpdateExpectedPowerShelf", workflowOptions, updateExpectedPowerShelfRequest)
-	if apiErr != nil {
-		return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
-	}
-
-	// Commit transaction
-	err = tx.Commit()
-	if err != nil {
-		logger.Error().Err(err).Msg("error committing ExpectedPowerShelf update transaction to DB")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to update ExpectedPowerShelf", nil)
-	}
-	// Set committed so, deferred cleanup functions will do nothing
-	txCommitted = true
-
-	// Create response
 	apiExpectedPowerShelf := model.NewAPIExpectedPowerShelf(updatedExpectedPowerShelf)
 
 	logger.Info().Msg("finishing API handler")
@@ -843,59 +741,39 @@ func (depsh DeleteExpectedPowerShelfHandler) Handle(c echo.Context) error {
 		return cutil.NewAPIErrorResponse(c, http.StatusForbidden, "Current org is not associated with the Site of the Expected Power Shelf", nil)
 	}
 
-	// Start a db tx
-	tx, err := cdb.BeginTx(ctx, depsh.dbSession, &sql.TxOptions{})
+	err = cdb.WithTx(ctx, depsh.dbSession, func(tx *cdb.Tx) error {
+		if err := epsDAO.Delete(ctx, tx, expectedPowerShelf.ID); err != nil {
+			logger.Error().Err(err).Msg("unable to delete ExpectedPowerShelf record from DB")
+			return cutil.NewAPIError(http.StatusInternalServerError, "Failed to delete Expected Power Shelf due to DB error", nil)
+		}
+
+		deleteExpectedPowerShelfRequest := &cwssaws.ExpectedPowerShelfRequest{
+			ExpectedPowerShelfId: &cwssaws.UUID{Value: expectedPowerShelf.ID.String()},
+			BmcMacAddress:        expectedPowerShelf.BmcMacAddress,
+		}
+
+		logger.Info().Msg("triggering ExpectedPowerShelf delete workflow")
+
+		workflowOptions := tclient.StartWorkflowOptions{
+			ID:                       "expected-power-shelf-delete-" + expectedPowerShelf.ID.String(),
+			WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
+			TaskQueue:                queue.SiteTaskQueue,
+		}
+
+		stc, err := depsh.scp.GetClientByID(site.ID)
+		if err != nil {
+			logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
+			return cutil.NewAPIError(http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
+		}
+
+		if apiErr := common.ExecuteSyncWorkflow(ctx, logger, stc, "DeleteExpectedPowerShelf", workflowOptions, deleteExpectedPowerShelfRequest); apiErr != nil {
+			return apiErr
+		}
+		return nil
+	})
 	if err != nil {
-		logger.Error().Err(err).Msg("unable to start transaction")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Expected Power Shelf due to DB error", nil)
+		return common.HandleTxError(c, logger, err, "Failed to delete Expected Power Shelf due to DB transaction error")
 	}
-	// this variable is used in cleanup actions to indicate if this transaction committed
-	txCommitted := false
-	defer common.RollbackTx(ctx, tx, &txCommitted)
-
-	// Delete ExpectedPowerShelf from DB
-	err = epsDAO.Delete(ctx, tx, expectedPowerShelf.ID)
-	if err != nil {
-		logger.Error().Err(err).Msg("unable to delete ExpectedPowerShelf record from DB")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Expected Power Shelf due to DB error", nil)
-	}
-
-	// Build the delete request for workflow
-	deleteExpectedPowerShelfRequest := &cwssaws.ExpectedPowerShelfRequest{
-		ExpectedPowerShelfId: &cwssaws.UUID{Value: expectedPowerShelf.ID.String()},
-		BmcMacAddress:        expectedPowerShelf.BmcMacAddress,
-	}
-
-	logger.Info().Msg("triggering ExpectedPowerShelf delete workflow")
-
-	// Create workflow options
-	workflowOptions := tclient.StartWorkflowOptions{
-		ID:                       "expected-power-shelf-delete-" + expectedPowerShelf.ID.String(),
-		WorkflowExecutionTimeout: cutil.WorkflowExecutionTimeout,
-		TaskQueue:                queue.SiteTaskQueue,
-	}
-
-	// Get the temporal client for the site we are working with
-	stc, err := depsh.scp.GetClientByID(site.ID)
-	if err != nil {
-		logger.Error().Err(err).Msg("failed to retrieve Temporal client for Site")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve client for Site", nil)
-	}
-
-	// Run workflow
-	apiErr := common.ExecuteSyncWorkflow(ctx, logger, stc, "DeleteExpectedPowerShelf", workflowOptions, deleteExpectedPowerShelfRequest)
-	if apiErr != nil {
-		return cutil.NewAPIErrorResponse(c, apiErr.Code, apiErr.Message, apiErr.Data)
-	}
-
-	// Commit transaction
-	err = tx.Commit()
-	if err != nil {
-		logger.Error().Err(err).Msg("error committing ExpectedPowerShelf delete transaction to DB")
-		return cutil.NewAPIErrorResponse(c, http.StatusInternalServerError, "Failed to delete Expected Power Shelf due to DB transaction error", nil)
-	}
-	// Set committed so, deferred cleanup functions will do nothing
-	txCommitted = true
 
 	logger.Info().Msg("finishing API handler")
 

@@ -26,6 +26,7 @@ import (
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db"
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/paginator"
+	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 	"github.com/google/uuid"
 
 	"github.com/uptrace/bun"
@@ -83,6 +84,77 @@ type ExpectedMachine struct {
 	Created                  time.Time         `bun:"created,nullzero,notnull,default:current_timestamp"`
 	Updated                  time.Time         `bun:"updated,nullzero,notnull,default:current_timestamp"`
 	CreatedBy                uuid.UUID         `bun:"type:uuid,notnull"`
+}
+
+// ExpectedMachineCredentials carries the BMC credentials for one
+// ExpectedMachine. They live in their own type because they aren't stored
+// in the DB record and have to be threaded through to ToProto separately.
+type ExpectedMachineCredentials struct {
+	Username *string
+	Password *string
+}
+
+// ToProto builds the workflow proto for this ExpectedMachine. BMC
+// credentials are passed in because they aren't persisted on the record;
+// labels are read from em.Labels.
+func (em *ExpectedMachine) ToProto(creds ExpectedMachineCredentials) *cwssaws.ExpectedMachine {
+	proto := &cwssaws.ExpectedMachine{
+		Id:                       &cwssaws.UUID{Value: em.ID.String()},
+		BmcMacAddress:            em.BmcMacAddress,
+		ChassisSerialNumber:      em.ChassisSerialNumber,
+		FallbackDpuSerialNumbers: em.FallbackDpuSerialNumbers,
+		SkuId:                    em.SkuID,
+	}
+
+	if em.RackID != nil {
+		proto.RackId = &cwssaws.RackId{Id: *em.RackID}
+	}
+	if em.Name != nil {
+		proto.Name = em.Name
+	}
+	if em.Manufacturer != nil {
+		proto.Manufacturer = em.Manufacturer
+	}
+	if em.Model != nil {
+		proto.Model = em.Model
+	}
+	if em.Description != nil {
+		proto.Description = em.Description
+	}
+	if em.FirmwareVersion != nil {
+		proto.FirmwareVersion = em.FirmwareVersion
+	}
+	if em.SlotID != nil {
+		proto.SlotId = em.SlotID
+	}
+	if em.TrayIdx != nil {
+		proto.TrayIdx = em.TrayIdx
+	}
+	if em.HostID != nil {
+		proto.HostId = em.HostID
+	}
+
+	if creds.Username != nil {
+		proto.BmcUsername = *creds.Username
+	}
+	if creds.Password != nil {
+		proto.BmcPassword = *creds.Password
+	}
+
+	if em.Labels != nil {
+		protoLabels := make([]*cwssaws.Label, 0, len(em.Labels))
+		for k, v := range em.Labels {
+			protoLabels = append(protoLabels, &cwssaws.Label{
+				Key:   k,
+				Value: &v,
+			})
+		}
+		proto.Metadata = &cwssaws.Metadata{
+			Labels: protoLabels,
+		}
+	}
+
+	return proto
 }
 
 // ExpectedMachineCreateInput input parameters for Create method

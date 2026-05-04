@@ -48,7 +48,6 @@ import (
 	"github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/api/pagination"
 	sc "github.com/NVIDIA/ncx-infra-controller-rest/api/pkg/client/site"
 	auth "github.com/NVIDIA/ncx-infra-controller-rest/auth/pkg/authorization"
-	cwssaws "github.com/NVIDIA/ncx-infra-controller-rest/workflow-schema/schema/site-agent/workflows/v1"
 
 	"github.com/NVIDIA/ncx-infra-controller-rest/db/pkg/db/ipam"
 )
@@ -440,17 +439,7 @@ func (cah CreateAllocationHandler) Handle(c echo.Context) error {
 		}
 
 		// Trigger apporpriate workflow on Site
-		// Unlikely case, but ensure that Tenant has an org display name populated
-		orgDisplayName := tenant.Org
-		if tenant.OrgDisplayName != nil {
-			orgDisplayName = *tenant.OrgDisplayName
-		}
-		createTenantRequest := &cwssaws.CreateTenantRequest{
-			OrganizationId: tenant.Org,
-			Metadata: &cwssaws.Metadata{
-				Name: orgDisplayName,
-			},
-		}
+		createTenantRequest := tenant.ToCreateRequestProto()
 
 		we, err := stc.ExecuteWorkflow(ctx, workflowOptions, "CreateTenant", createTenantRequest)
 		if err != nil {
